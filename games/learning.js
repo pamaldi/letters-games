@@ -2,9 +2,11 @@
 (() => {
   'use strict';
   const gamesBase = new URL('.', document.currentScript.src);
+  const assetVersion = new URL(document.currentScript.src).searchParams.get('v') || '20261025-come-2';
   const refreshToken = new URL(location.href).searchParams.get('refresh');
   function freshLink(url) {
     const target = new URL(url, location.href);
+    target.searchParams.set('v', assetVersion);
     if (refreshToken) target.searchParams.set('refresh', refreshToken);
     return target.href;
   }

@@ -18,6 +18,8 @@ Nei menu dei giochi apri **Vocali, percorso e progressi** per modificare le opzi
 
 Tutti i giochi condividono le registrazioni complete **A come ape, E come elicottero, I come ippopotamo, O come orso, U come uva**, riproducibili anche senza una voce italiana sul dispositivo. I nuovi turni scelgono le vocali meno proposte fra quelle selezionate, con ordine variabile; gli errori non aumentano più la frequenza di una vocale. Nei giochi con parole viene scelta prima la vocale bersaglio e poi una parola che la contiene. Nella Luna autonoma la vocale non viene anticipata, fino alla richiesta di aiuto. Con più vocali mancanti nella stessa parola rimangono anche le ripetizioni naturali della parola.
 
+Nei richiami iniziali la frase registrata parte prima delle altre istruzioni, per evitare che venga ritardata dalla sintesi vocale. I collegamenti alle pagine e ai file condivisi includono una versione per evitare il riuso di file precedenti nella cache del telefono.
+
 In Luna l'opzione autonoma pronuncia la parola senza anticipare la vocale mancante; dopo due errori offre un aiuto esplicito. L'opzione dei colori uguali permette di esercitare il riconoscimento della forma. La voce e gli effetti hanno controlli separati.
 
 Il controllo della scrittura confronta copertura e vicinanza del tratto con un modello tollerante. Non valuta ordine dei tratti, impugnatura o abilità su carta. La lettura non usa riconoscimento vocale automatico. I progressi rimangono nel browser del dispositivo, senza sincronizzazione.

@@ -5,8 +5,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bungee&display=swap">
-<link rel="stylesheet" href="learning.css">
-<script src="learning.js"></script>
+<link rel="stylesheet" href="learning.css?v=20261025-come-2">
+<script src="learning.js?v=20261025-come-2"></script>
 <style>
 /* Layout: one-screen space workshop — HUD strip, framed night-sky stage with the rocket on the left, the word card on top and the five vowels in a row at the bottom, arrow buttons below */
 :root {
@@ -341,7 +341,7 @@ kbd {
       <div><dt>Sulla Luna</dt><dd id="hud-moon">0</dd></div>
     </dl>
     <div class="tools">
-      <a class="tool home-link" href="../index.html" aria-label="Tutti i giochi" title="Tutti i giochi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5M5 9v12h5v-7h4v7h5V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a class="tool home-link" href="../index.html?v=20261025-come-2" aria-label="Tutti i giochi" title="Tutti i giochi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5M5 9v12h5v-7h4v7h5V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       <button class="tool" id="btn-sound" type="button" aria-pressed="true" aria-label="Disattiva audio" title="Audio acceso">
         <svg id="ic-sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.6 8.6 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <svg id="ic-sound-off" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -984,8 +984,9 @@ kbd {
   function announce() {
     if (!word) return;
     const t = currentTarget();
-    const parts = [word.text.toLowerCase()];
-    if (t && !Learning.settings.autonomous) parts.push('cerca la vocale', t.v.toLowerCase());
+    const parts = [];
+    if (t && !Learning.settings.autonomous) parts.push(Learning.exampleText(t.v));
+    parts.push(word.text.toLowerCase());
     speakSeq(parts);
   }
   function cardLayout() {
@@ -1073,7 +1074,7 @@ kbd {
     const c = slotCenter(slot);
     burst(c.x, c.y, COLOR[v], 14);
     const next = currentTarget();
-    if (next) { word.slotErrors = 0; word.helped = false; if (Learning.settings.autonomous) speakSeq([word.text.toLowerCase(), 'trova la prossima vocale']); else speakSeq(['ora cerca la vocale', next.v.toLowerCase()]); }
+    if (next) { word.slotErrors = 0; word.helped = false; if (Learning.settings.autonomous) speakSeq([word.text.toLowerCase(), 'trova la prossima vocale']); else speakSeq([Learning.exampleText(next.v)]); }
     else wordComplete();
   }
   function wordComplete() {

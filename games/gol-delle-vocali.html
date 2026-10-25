@@ -5,8 +5,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Teko:wght@500;600&display=swap">
-<link rel="stylesheet" href="learning.css">
-<script src="learning.js"></script>
+<link rel="stylesheet" href="learning.css?v=20261025-come-2">
+<script src="learning.js?v=20261025-come-2"></script>
 <style>
 /* Layout: one-screen night stadium — scoreboard strip, floodlit pitch seen from behind the striker with the goal on top and five vowel balls in a row */
 :root {
@@ -315,7 +315,7 @@ kbd {
     </div>
     <div class="cups"><span>Coppe</span><b id="s-cups">0</b></div>
     <div class="tools">
-      <a class="tool home-link" href="../index.html" aria-label="Tutti i giochi" title="Tutti i giochi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5M5 9v12h5v-7h4v7h5V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a class="tool home-link" href="../index.html?v=20261025-come-2" aria-label="Tutti i giochi" title="Tutti i giochi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5M5 9v12h5v-7h4v7h5V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       <button class="tool" id="btn-repeat" type="button" aria-label="Ripeti la voce" title="Ripeti (Invio)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.6 8.6 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
@@ -844,8 +844,9 @@ kbd {
   }
   function promptVoice() {
     if (!round) return;
-    const said = round.word ? [round.word.text.toLowerCase()] : [];
-    said.push('tira la vocale', round.v.toLowerCase());
+    // La frase registrata parte subito, prima delle istruzioni sintetizzate.
+    const said = [Learning.exampleText(round.v)];
+    if (round.word) said.push(round.word.text.toLowerCase());
     speakSeq(said);
   }
   function chooseBall(i) {

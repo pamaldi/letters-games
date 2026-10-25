@@ -31,8 +31,8 @@
     @media (max-width: 580px) { main { padding: 30px 18px; } .games { grid-template-columns: 1fr; } .vowels { gap: 8px; } .vowels span { width: 46px; height: 52px; font-size: 30px; } }
     @media (prefers-reduced-motion: reduce) { .game { transition: none; } .game:hover { transform: none; } }
   </style>
-<link rel="stylesheet" href="games/learning.css">
-<script src="games/learning.js"></script>
+<link rel="stylesheet" href="games/learning.css?v=20261025-come-2">
+<script src="games/learning.js?v=20261025-come-2"></script>
 </head>
 <body>
   <main>
@@ -50,31 +50,31 @@
       <p id="refresh-status" role="status" aria-live="polite"></p>
     </header>
     <nav class="games" aria-label="Scegli un gioco">
-      <a class="game" href="games/gol-delle-vocali.html" style="--accent:#a9e5bb">
+      <a class="game" href="games/gol-delle-vocali.html?v=20261025-come-2" style="--accent:#a9e5bb">
         <span class="icon" aria-hidden="true">⚽</span>
         <h2>Gol delle vocali</h2>
         <p>Ascolta la vocale e scegli il pallone giusto. Pronto a fare gol?</p>
         <span class="play" aria-hidden="true">Giochiamo →</span>
       </a>
-      <a class="game" href="games/para-le-vocali.html" style="--accent:#ffb7bf">
+      <a class="game" href="games/para-le-vocali.html?v=20261025-come-2" style="--accent:#ffb7bf">
         <span class="icon" aria-hidden="true">🧤</span>
         <h2>Para le vocali</h2>
         <p>Ascolta la vocale e para il rigore! Sul pallone non ci sono lettere: hai 15 secondi per scegliere quella giusta.</p>
         <span class="play" aria-hidden="true">Giochiamo →</span>
       </a>
-      <a class="game" href="games/miniera-delle-vocali.html" style="--accent:#ffd782">
+      <a class="game" href="games/miniera-delle-vocali.html?v=20261025-come-2" style="--accent:#ffd782">
         <span class="icon" aria-hidden="true">⛏️</span>
         <h2>Miniera delle vocali</h2>
         <p>Trova e scrivi le vocali per costruire case, torri, ponti, castelli, fari e mulini!</p>
         <span class="play" aria-hidden="true">Giochiamo →</span>
       </a>
-      <a class="game" href="games/parole-per-la-luna.html" style="--accent:#d7beff">
+      <a class="game" href="games/parole-per-la-luna.html?v=20261025-come-2" style="--accent:#d7beff">
         <span class="icon" aria-hidden="true">🌙</span>
         <h2>Parole per la Luna</h2>
         <p>Aiuta Pico a completare le parole e a costruire il razzo per la Luna!</p>
         <span class="play" aria-hidden="true">Giochiamo →</span>
       </a>
-      <a class="game" href="games/caccia-alle-vocali.html" style="--accent:#a9d7ff">
+      <a class="game" href="games/caccia-alle-vocali.html?v=20261025-come-2" style="--accent:#a9d7ff">
         <span class="icon" aria-hidden="true">🚀</span>
         <h2>Caccia alle vocali</h2>
         <p>Ascolta la voce e trova la vocale con calma, oppure prova la sfida a tempo!</p>
@@ -94,8 +94,8 @@
         // Refresh the exact URLs used by the pages, replacing their HTTP cache entries.
         // Progress and preferences in localStorage are intentionally preserved.
         const base = new URL('.', location.href);
-        const files = ['index.html', 'games/learning.js', 'games/learning.css',
-          ...Array.from(document.querySelectorAll('.game'), a => a.getAttribute('href').split('?')[0])];
+        const files = ['index.html', 'games/learning.js?v=20261025-come-2', 'games/learning.css?v=20261025-come-2',
+          ...Array.from(document.querySelectorAll('.game'), a => a.getAttribute('href'))];
         await Promise.all(files.map(async file => {
           const response = await fetch(new URL(file, base), { cache: 'reload', signal: controller.signal });
           if (!response.ok) throw new Error('Download non riuscito');
