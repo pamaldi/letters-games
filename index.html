@@ -15,6 +15,10 @@
     .vowels span { display: grid; place-items: center; width: 56px; height: 60px; border-radius: 18px; color: #10192f; background: var(--color); font-size: 36px; font-weight: 900; transform: rotate(var(--angle, -6deg)); }
     h1 { font-size: clamp(28px, 5vw, 44px); line-height: 1.15; margin: 0 0 14px; }
     header p { color: #c4cee4; font-size: 19px; margin: 0; }
+    .refresh-games { margin-top: 20px; padding: 12px 18px; min-height: 48px; border: 1px solid #71839f; border-radius: 12px; background: #dbeaff; color: #10192f; font: bold 16px system-ui, sans-serif; cursor: pointer; }
+    .refresh-games:focus-visible { outline: 3px solid #ffd782; outline-offset: 4px; }
+    .refresh-games:disabled { opacity: .65; cursor: wait; }
+    #refresh-status { margin-top: 8px; font-size: 14px; }
     .games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
     .game { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 26px; border: 2px solid #354562; border-radius: 24px; background: #1a2843; color: inherit; text-decoration: none; transition: border-color .15s, transform .15s; }
     .game:hover { border-color: var(--accent); transform: translateY(-3px); }
@@ -42,6 +46,8 @@
       </div>
       <h1>Giochiamo con le vocali</h1>
       <p>Scegli un’avventura. Ascolta, trova e gioca!</p>
+      <button class="refresh-games" id="refresh-games" type="button">↻ Aggiorna giochi</button>
+      <p id="refresh-status" role="status" aria-live="polite"></p>
     </header>
     <nav class="games" aria-label="Scegli un gioco">
       <a class="game" href="games/gol-delle-vocali.html" style="--accent:#a9e5bb">
@@ -53,7 +59,7 @@
       <a class="game" href="games/para-le-vocali.html" style="--accent:#ffb7bf">
         <span class="icon" aria-hidden="true">🧤</span>
         <h2>Para le vocali</h2>
-        <p>Il Dieci tira un rigore: hai 30 secondi durante il volo del pallone per scegliere la vocale e parare!</p>
+        <p>Ascolta la vocale e para il rigore! Sul pallone non ci sono lettere: hai 15 secondi per scegliere quella giusta.</p>
         <span class="play" aria-hidden="true">Giochiamo →</span>
       </a>
       <a class="game" href="games/miniera-delle-vocali.html" style="--accent:#ffd782">
@@ -77,5 +83,32 @@
     </nav>
     <footer>Accendi l’audio per ascoltare le vocali.<br>In ogni gioco, tocca la casetta per scegliere un’altra avventura.</footer>
   </main>
+  <script>
+    document.getElementById('refresh-games').addEventListener('click', async function () {
+      const status = document.getElementById('refresh-status');
+      this.disabled = true;
+      status.textContent = 'Scarico la versione aggiornata dei giochi…';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      try {
+        // Refresh the exact URLs used by the pages, replacing their HTTP cache entries.
+        // Progress and preferences in localStorage are intentionally preserved.
+        const base = new URL('.', location.href);
+        const files = ['index.html', 'games/learning.js', 'games/learning.css',
+          ...Array.from(document.querySelectorAll('.game'), a => a.getAttribute('href').split('?')[0])];
+        await Promise.all(files.map(async file => {
+          const response = await fetch(new URL(file, base), { cache: 'reload', signal: controller.signal });
+          if (!response.ok) throw new Error('Download non riuscito');
+          await response.arrayBuffer();
+        }));
+        const next = new URL('index.html', base);
+        next.searchParams.set('refresh', Date.now().toString());
+        location.replace(next.href);
+      } catch (error) {
+        status.textContent = 'Non riesco ad aggiornare. Controlla la connessione e riprova.';
+        this.disabled = false;
+      } finally { clearTimeout(timeout); }
+    });
+  </script>
 </body>
 </html>

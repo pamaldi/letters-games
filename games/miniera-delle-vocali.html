@@ -1015,10 +1015,12 @@ kbd {
       if (round === current) { round.written = true; press(current.v); }
     });
   }
+  const VOWEL_EXAMPLES = { A: 'ape', E: 'elicottero', I: 'ippopotamo', O: 'orso', U: 'uva' };
+  function vowelExample(v) { return [v.toLowerCase(), 'di ' + VOWEL_EXAMPLES[v]]; }
   function promptVoice() {
     if (!round) return;
     const said = round.word ? [round.word.text.toLowerCase()] : [];
-    said.push('cerca la vocale', round.v.toLowerCase());
+    said.push('cerca la vocale', ...vowelExample(round.v));
     speakSeq(said);
   }
   function press(v) {
@@ -1046,7 +1048,7 @@ kbd {
       build.wrong[round.v]++;
       const key = `${round.v}>${v}`;
       build.swaps[key] = (build.swaps[key] || 0) + 1;
-      speakSeq(['questa è la', v.toLowerCase(), 'scava la vocale', round.v.toLowerCase()]);
+      speakSeq(['questa è la', ...vowelExample(v), 'cerca la vocale', ...vowelExample(round.v)]);
     }
     setPhase('swing');
     updateHint();
