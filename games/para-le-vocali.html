@@ -338,7 +338,7 @@ kbd {
   </header>
 
   <main class="stage" id="stage">
-    <canvas id="game" aria-label="Un rigore visto dalla porta: il Dieci tira e il pallone vola per 15 secondi; scegli la vocale per parare"></canvas>
+    <canvas id="game" aria-label="Un rigore visto dalla porta: il Dieci tira e il pallone vola per 10 secondi; scegli la vocale per parare"></canvas>
 
     <section class="overlay" id="ov-menu" aria-labelledby="menu-title">
       <div class="card">
@@ -348,7 +348,7 @@ kbd {
             <span class="glyph" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" style="fill:var(--ink)"/><path d="M12 7.5l3.2 2.3-1.2 3.8h-4l-1.2-3.8z" style="fill:var(--bg)"/><path d="M12 2.2v5.3M15.2 9.8l5-1.6M14 13.6l3 4.2M10 13.6l-3 4.2M8.8 9.8l-5-1.6" style="stroke:var(--bg);stroke-width:1.2;fill:none"/></svg>
             </span>
-            <p>Il Dieci tira un rigore! Guarda il pallone e ascolta la vocale: hai 15 secondi per parare.</p>
+            <p>Il Dieci tira un rigore! Guarda il pallone e ascolta la vocale: hai 10 secondi per parare.</p>
           </li>
           <li>
             <span class="glyph" aria-hidden="true">
@@ -360,7 +360,7 @@ kbd {
             <span class="glyph" aria-hidden="true">
               <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1" style="fill:none;stroke:var(--ink);stroke-width:2"/><path d="M3 9h18M3 13h18M8 5v14M13 5v14M18 5v14" style="stroke:var(--ink-dim);stroke-width:1"/><circle cx="16" cy="13" r="3" style="fill:var(--danger)"/></svg>
             </span>
-            <p>Durante il volo, scegli la vocale giusta per parare. Hai 15 secondi per ogni rigore. Se scegli una vocale sbagliata o il tempo scade, è gol. Una partita sono 10 rigori.</p>
+            <p>Durante il volo, scegli la vocale giusta per parare. Hai 10 secondi per ogni rigore. Se scegli una vocale sbagliata o il tempo scade, è gol. Una partita sono 10 rigori.</p>
           </li>
         </ul>
         <div class="voice-row">
@@ -421,7 +421,7 @@ kbd {
 
   const TAU = Math.PI * 2;
   const VOWELS = ['A', 'E', 'I', 'O', 'U'];
-  const RUN_TIME = 15; // durata del volo del rigore: il bambino può parare durante il tiro
+  const RUN_TIME = 10; // durata del volo del rigore: il bambino può parare durante il tiro
   const SHOTS = 10;
   const PLAY_PHASES = ['kickoff', 'run', 'shot', 'saved', 'scored', 'next'];
   const DISPLAY = 'Teko, "Arial Narrow", Impact, sans-serif';
@@ -1029,8 +1029,8 @@ kbd {
         if (phaseT >= 1.4) startRound();
         break;
       case 'run': {
-        if (round.reminders === 0 && phaseT >= 5) { round.reminders = 1; round.helped = true; speakSeq([Learning.exampleText(round.v)]); }
-        if (round.reminders === 1 && phaseT >= 10) { round.reminders = 2; round.helped = true; speakSeq([Learning.exampleText(round.v)]); }
+        if (round.reminders === 0 && phaseT >= 4) { round.reminders = 1; round.helped = true; speakSeq([Learning.exampleText(round.v)]); }
+        if (round.reminders === 1 && phaseT >= 7) { round.reminders = 2; round.helped = true; speakSeq([Learning.exampleText(round.v)]); }
         const left = Math.ceil(RUN_TIME - phaseT);
         if (left <= 5 && left < round.lastTick) { round.lastTick = left; sfx.tick(); }
         if (phaseT >= RUN_TIME) { Learning.record(round.v, 'recognition', false); shoot(false, null); resolveShot(); }
