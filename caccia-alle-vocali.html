@@ -1,0 +1,1672 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caccia alle Vocali</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bungee&display=swap">
+<style>
+/* Layout: one-screen arcade cabinet — HUD strip, framed night-sky stage over a small planet, keycap row of the five vowels */
+:root {
+  color-scheme: dark;
+  --bg: #080a22;
+  --sky-top: #0c0f33;
+  --sky-low: #251a5e;
+  --panel: #151948;
+  --card: rgba(12, 15, 48, 0.88);
+  --dim: rgba(8, 10, 34, 0.45);
+  --line: #33377a;
+  --ink: #f7f0e2;
+  --ink-dim: #a9a7d6;
+  --hull: #f7f0e2;
+  --wing: #8a7bff;
+  --flame: #ff9b3d;
+  --planet: #6a4b9c;
+  --planet-low: #2a1d58;
+  --danger: #ff5c74;
+  --v-a: #ff6b5b;
+  --v-e: #ffc53d;
+  --v-i: #41dcab;
+  --v-o: #56c3ff;
+  --v-u: #cf95ff;
+  --font-display: "Bungee", "Arial Black", Impact, system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+[hidden] { display: none !important; }
+html { height: 100%; box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+}
+button { font: inherit; }
+:focus-visible { outline: 3px solid var(--v-o); outline-offset: 2px; }
+
+.app {
+  height: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-block: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- HUD ---------- */
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+}
+.brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+.stats { display: flex; gap: 18px; margin: 0; }
+.stats div { display: flex; flex-direction: column; gap: 2px; min-width: 3.2rem; }
+.stats dt {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-dim);
+}
+.stats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.lives { display: flex; align-items: center; gap: 5px; height: 1.32rem; }
+.life {
+  display: block;
+  width: 13px;
+  height: 15px;
+  background: var(--hull);
+  clip-path: polygon(50% 0, 100% 100%, 50% 78%, 0 100%);
+}
+.life.gone { background: var(--line); }
+.tools { display: flex; gap: 8px; }
+.tool {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+.tool:hover:not(:disabled) { border-color: var(--ink-dim); }
+.tool:disabled { opacity: 0.4; cursor: default; }
+.tool svg { width: 20px; height: 20px; }
+
+/* ---------- stage ---------- */
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 220px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--sky-top);
+}
+canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+.repeat {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.repeat:hover { border-color: var(--ink-dim); }
+.repeat svg { width: 20px; height: 20px; }
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  overflow: auto;
+  padding: 16px;
+}
+.overlay.dimmed { background: var(--dim); }
+.card {
+  margin: auto;
+  width: 100%;
+  max-width: 30rem;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 22px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+#ov-menu .card { margin: auto 0; margin-inline-start: clamp(0px, 5%, 56px); }
+.card h2 { margin: 0; text-wrap: balance; }
+.card p { margin: 0; }
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.7rem, 4.6vw, 2.6rem);
+  line-height: 1.02;
+  letter-spacing: 0.01em;
+}
+.title b { font-weight: 400; color: var(--c); }
+
+.how { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.how li { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: center; }
+.how p { max-width: 44ch; }
+.glyph { width: 36px; height: 36px; display: grid; place-items: center; }
+.glyph svg { width: 30px; height: 30px; }
+.glyph.orb {
+  border-radius: 50%;
+  background: var(--c);
+  color: var(--sky-top);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+.glyph.orb svg { width: 20px; height: 20px; }
+.glyph.planet {
+  position: relative;
+  border-radius: 8px;
+  background: radial-gradient(circle at 50% 135%, var(--planet) 58%, transparent 59%);
+}
+.glyph.planet::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: var(--v-u);
+  box-shadow: 0 0 0 3px rgba(255, 92, 116, 0.45);
+}
+
+.speed { border: 0; margin: 0; padding: 0; min-width: 0; }
+.speed legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-dim);
+}
+.seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label {
+  padding: 8px 6px;
+  border-radius: 9px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+.seg label:hover { color: var(--ink); }
+.seg input:checked + label { background: var(--ink); color: var(--sky-top); }
+.seg input:focus-visible + label { outline: 3px solid var(--v-o); outline-offset: 2px; }
+
+.voice-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.voice-row .fine { flex: 1 1 12rem; min-width: 0; }
+
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.btn {
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.btn.small { padding: 7px 12px; font-size: 0.85rem; }
+.btn.primary {
+  background: var(--ink);
+  color: var(--sky-top);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 0 var(--v-e);
+}
+.btn.primary:hover { transform: translateY(-1px); box-shadow: 0 5px 0 var(--v-e); }
+.btn.primary:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--v-e); }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn.ghost:hover { border-color: var(--ink-dim); }
+.hint, .fine { color: var(--ink-dim); font-size: 0.84rem; }
+kbd {
+  font-family: var(--font-body);
+  font-size: 0.8em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--ink-dim);
+}
+.card h2.plain { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; line-height: 1.1; }
+.final { font-family: var(--font-display); font-size: clamp(2.4rem, 8vw, 3.6rem); line-height: 1; }
+.final small { font-family: var(--font-body); font-size: 1rem; font-weight: 700; color: var(--ink-dim); }
+.badge {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--v-e);
+  color: var(--sky-top);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; }
+.summary div { padding: 10px 12px; border-radius: 12px; background: var(--panel); min-width: 0; }
+.summary dt {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-dim);
+}
+.summary dd { margin: 0; font-family: var(--font-display); font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.vstats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.vstats li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  text-align: center;
+  min-width: 0;
+}
+.vstats b { font-family: var(--font-display); font-weight: 400; font-size: 1.3rem; color: var(--c); }
+.vstats span { font-size: 0.7rem; line-height: 1.25; color: var(--ink-dim); }
+
+/* ---------- vowel keys ---------- */
+.pad {
+  width: 100%;
+  max-width: 36rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.key {
+  height: 54px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-bottom: 4px solid var(--c);
+  background: var(--panel);
+  color: var(--c);
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s, background-color 0.12s, color 0.12s;
+}
+.key:hover { border-top-color: var(--ink-dim); border-left-color: var(--ink-dim); border-right-color: var(--ink-dim); }
+.key.ok { background: var(--c); color: var(--sky-top); transform: translateY(2px); }
+.key.bad { border-color: var(--danger); animation: nudge 0.22s; }
+@keyframes nudge { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+
+@media (max-width: 560px) {
+  .brand { display: none; }
+  .stats { gap: 12px; }
+  .stats div { min-width: 0; }
+  .card { padding: 18px 16px 16px; gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .key { transition: none; }
+  .key.bad { animation: none; }
+}
+</style>
+
+<div class="app">
+  <header class="hud">
+    <h1 class="brand">Caccia alle Vocali</h1>
+    <dl class="stats">
+      <div><dt>Punti</dt><dd id="hud-score">0</dd></div>
+      <div><dt>Livello</dt><dd id="hud-level">1</dd></div>
+      <div><dt>Vite</dt><dd class="lives" id="hud-lives" aria-label="3 vite"></dd></div>
+      <div><dt>Record</dt><dd id="hud-best">0</dd></div>
+    </dl>
+    <div class="tools">
+      <button class="tool" id="btn-sound" type="button" aria-pressed="true" aria-label="Disattiva audio" title="Audio acceso">
+        <svg id="ic-sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.6 8.6 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg id="ic-sound-off" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="tool" id="btn-pause" type="button" aria-label="Pausa" title="Pausa (Spazio)" disabled>
+        <svg id="ic-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg>
+        <svg id="ic-play" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <canvas id="game" aria-label="Campo di gioco: le vocali scendono verso il pianeta"></canvas>
+
+    <button class="repeat" id="btn-repeat" type="button" hidden aria-label="Ripeti la vocale">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.6 8.6 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Ripeti</span>
+    </button>
+
+    <section class="overlay" id="ov-menu" aria-labelledby="menu-title">
+      <div class="card">
+        <h2 class="title" id="menu-title" aria-label="Caccia alle Vocali">C<b style="--c:var(--v-a)">A</b>CC<b style="--c:var(--v-i)">I</b><b style="--c:var(--v-a)">A</b> <b style="--c:var(--v-a)">A</b>LL<b style="--c:var(--v-e)">E</b> V<b style="--c:var(--v-o)">O</b>C<b style="--c:var(--v-a)">A</b>L<b style="--c:var(--v-i)">I</b></h2>
+        <ul class="how">
+          <li>
+            <span class="glyph orb" style="--c:var(--v-o)" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 9h3l5-4v14l-5-4H4z" style="fill:var(--sky-top)"/><path d="M16 8.5a5 5 0 0 1 0 7" style="fill:none;stroke:var(--sky-top);stroke-width:2;stroke-linecap:round"/></svg>
+            </span>
+            <p>Ascolta la voce: dice una vocale. Premi la sua lettera, anche se sullo schermo ce ne sono altre.</p>
+          </li>
+          <li>
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M8.6 10 4 17.5l4.8-1.3zM15.4 10 20 17.5l-4.8-1.3z" style="fill:var(--wing)"/><path d="M12 2c3 3 4 7.4 3.6 12.6H8.4C8 9.4 9 5 12 2z" style="fill:var(--hull)"/><circle cx="12" cy="8.8" r="1.7" style="fill:var(--sky-top)"/><path d="M10 15.4h4l-2 5.6z" style="fill:var(--flame)"/></svg>
+            </span>
+            <p>Se la lettera è giusta, la navicella colpisce la vocale e senti «Bravo!». Più in alto la colpisci, più punti fai.</p>
+          </li>
+          <li>
+            <span class="glyph planet" aria-hidden="true"></span>
+            <p>Se la vocale detta dalla voce tocca il pianeta perdi una vita. Ne hai tre, e le altre vocali non contano.</p>
+          </li>
+        </ul>
+        <fieldset class="speed">
+          <legend>Velocità</legend>
+          <div class="seg">
+            <input type="radio" name="diff" id="d-calma" value="calma"><label for="d-calma">Calma</label>
+            <input type="radio" name="diff" id="d-normale" value="normale" checked><label for="d-normale">Normale</label>
+            <input type="radio" name="diff" id="d-turbo" value="turbo"><label for="d-turbo">Turbo</label>
+          </div>
+        </fieldset>
+        <div class="voice-row">
+          <p class="fine" id="voice-name">Cerco una voce italiana…</p>
+          <button class="btn ghost small" id="btn-voice" type="button">Prova la voce</button>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btn-start" type="button">Decolla</button>
+          <span class="hint">oppure premi <kbd>Invio</kbd></span>
+        </div>
+        <p class="fine">Valgono anche à è é ì ò ù. <kbd>Spazio</kbd> mette in pausa. <kbd>Invio</kbd> fa risentire la vocale. Su telefono usa i tasti qui sotto.</p>
+      </div>
+    </section>
+
+    <section class="overlay dimmed" id="ov-pause" aria-labelledby="pause-title" hidden>
+      <div class="card">
+        <p class="eyebrow">Pausa</p>
+        <h2 class="plain" id="pause-title">Navicella in attesa</h2>
+        <p>Le vocali restano ferme finché non riparti.</p>
+        <div class="actions">
+          <button class="btn primary" id="btn-resume" type="button">Riprendi</button>
+          <button class="btn ghost" id="btn-quit" type="button">Torna al menu</button>
+        </div>
+        <p class="hint">Premi <kbd>Spazio</kbd> per riprendere.</p>
+      </div>
+    </section>
+
+    <section class="overlay dimmed" id="ov-over" aria-labelledby="over-title" hidden>
+      <div class="card">
+        <p class="eyebrow" id="over-title">Missione finita</p>
+        <p class="final"><span id="over-score">0</span> <small>punti</small></p>
+        <p class="badge" id="over-record" hidden>Nuovo record</p>
+        <dl class="summary">
+          <div><dt>Livello</dt><dd id="over-level">1</dd></div>
+          <div><dt>Precisione</dt><dd id="over-acc">–</dd></div>
+          <div><dt>Colpite</dt><dd id="over-hits">0</dd></div>
+        </dl>
+        <ul class="vstats" id="over-vowels" aria-label="Risultati per vocale"></ul>
+        <p id="over-tip"></p>
+        <div class="actions">
+          <button class="btn primary" id="btn-again" type="button">Gioca ancora</button>
+          <button class="btn ghost" id="btn-menu" type="button">Cambia velocità</button>
+        </div>
+        <p class="hint"><kbd>Invio</kbd> per ripartire</p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="pad" aria-label="Tasti delle vocali">
+    <button class="key" type="button" tabindex="-1" data-v="A" style="--c:var(--v-a)" aria-label="Spara alla A">A</button>
+    <button class="key" type="button" tabindex="-1" data-v="E" style="--c:var(--v-e)" aria-label="Spara alla E">E</button>
+    <button class="key" type="button" tabindex="-1" data-v="I" style="--c:var(--v-i)" aria-label="Spara alla I">I</button>
+    <button class="key" type="button" tabindex="-1" data-v="O" style="--c:var(--v-o)" aria-label="Spara alla O">O</button>
+    <button class="key" type="button" tabindex="-1" data-v="U" style="--c:var(--v-u)" aria-label="Spara alla U">U</button>
+  </nav>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const TAU = Math.PI * 2;
+  const VOWELS = ['A', 'E', 'I', 'O', 'U'];
+  const NOTES = { A: 523.25, E: 587.33, I: 659.25, O: 783.99, U: 880 };
+  const LEVEL_EVERY = 10;
+  const MAX_LIVES = 3;
+  const REPEAT_EVERY = 4; // secondi tra una ripetizione e l'altra della vocale chiamata
+  // fall = secondi per arrivare al pianeta, spawn = secondi tra una vocale e l'altra
+  const DIFF = {
+    calma:   { fall: 12,  spawn: 3.6, minFall: 5,   minSpawn: 1.8 },
+    normale: { fall: 9,   spawn: 2.8, minFall: 3.6, minSpawn: 1.3 },
+    turbo:   { fall: 6.5, spawn: 2,   minFall: 2.8, minSpawn: 0.9 },
+  };
+  const DEMO = { fall: 9, spawn: 2.2, minFall: 9, minSpawn: 2.2 };
+  // Formanti (frequenza, larghezza di banda, guadagno) delle vocali italiane per la voce di riserva
+  const FORMANTS = {
+    A: [[800, 80, 1], [1250, 90, 0.5], [2600, 120, 0.2]],
+    E: [[420, 70, 1], [2000, 100, 0.45], [2650, 120, 0.25]],
+    I: [[290, 60, 1], [2350, 100, 0.4], [3000, 140, 0.3]],
+    O: [[480, 70, 1], [850, 80, 0.55], [2600, 120, 0.15]],
+    U: [[320, 60, 1], [700, 80, 0.4], [2500, 120, 0.1]],
+  };
+  const DISPLAY = 'Bungee, "Arial Black", Impact, sans-serif';
+  const BODY = '"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif';
+  const PREFS_KEY = 'caccia-alle-vocali';
+  const reduceMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  const $ = (id) => document.getElementById(id);
+  const stage = $('stage');
+  const canvas = $('game');
+  const ctx = canvas.getContext('2d');
+  const css = getComputedStyle(document.documentElement);
+  const tok = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+  const COLOR = {
+    A: tok('--v-a', '#ff6b5b'), E: tok('--v-e', '#ffc53d'), I: tok('--v-i', '#41dcab'),
+    O: tok('--v-o', '#56c3ff'), U: tok('--v-u', '#cf95ff'),
+  };
+  const C = {
+    skyTop: tok('--sky-top', '#0c0f33'), skyLow: tok('--sky-low', '#251a5e'), ink: tok('--ink', '#f7f0e2'),
+    hull: tok('--hull', '#f7f0e2'), wing: tok('--wing', '#8a7bff'), flame: tok('--flame', '#ff9b3d'),
+    planet: tok('--planet', '#6a4b9c'), planetLow: tok('--planet-low', '#2a1d58'), danger: tok('--danger', '#ff5c74'),
+  };
+
+  const hud = { score: $('hud-score'), level: $('hud-level'), lives: $('hud-lives'), best: $('hud-best') };
+  const overlays = { menu: $('ov-menu'), pause: $('ov-pause'), over: $('ov-over') };
+  const btnPause = $('btn-pause');
+  const btnSound = $('btn-sound');
+  const btnRepeat = $('btn-repeat');
+  const keyEls = {};
+  document.querySelectorAll('.key').forEach((el) => { keyEls[el.dataset.v] = el; });
+
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  function rgba(hex, a) {
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+    const n = parseInt(h, 16) || 0;
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+
+  // ---------- preferenze (solo comodità per chi gioca) ----------
+  function loadPrefs() {
+    const base = { diff: 'normale', muted: false, best: {} };
+    try {
+      const raw = localStorage.getItem(PREFS_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        return { ...base, ...p, best: { ...base.best, ...(p.best || {}) } };
+      }
+    } catch (e) { /* storage non disponibile */ }
+    return base;
+  }
+  let prefs = loadPrefs();
+  function savePrefs() {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) { /* ignora */ }
+  }
+
+  // ---------- audio ----------
+  let actx = null;
+  let master = null;
+  let voiceOut = null;
+  let muted = false;
+  function ensureAudio() {
+    if (!actx) {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        actx = new AC();
+        master = actx.createGain();
+        master.gain.value = 0.55;
+        master.connect(actx.destination);
+        voiceOut = actx.createGain();
+        voiceOut.gain.value = 1;
+        voiceOut.connect(actx.destination);
+        loadClips();
+      } catch (e) { actx = null; return; }
+    }
+    if (actx.state === 'suspended') actx.resume().catch(() => {});
+  }
+  function tone(freq, { type = 'sine', dur = 0.15, vol = 0.25, slide = 0, delay = 0 } = {}) {
+    if (!actx || muted) return;
+    const t0 = actx.currentTime + delay;
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g);
+    g.connect(master);
+    o.start(t0);
+    o.stop(t0 + dur + 0.03);
+  }
+  const sfx = {
+    shoot() { tone(980, { type: 'square', dur: 0.08, vol: 0.05, slide: 420 }); },
+    hit(v) {
+      const f = NOTES[v];
+      tone(f, { type: 'triangle', dur: 0.28, vol: 0.14 });
+      tone(f * 2, { dur: 0.2, vol: 0.08, delay: 0.035 });
+    },
+    miss() { tone(150, { type: 'sawtooth', dur: 0.18, vol: 0.09, slide: 90 }); },
+    crash() { tone(320, { type: 'sawtooth', dur: 0.42, vol: 0.15, slide: 55 }); },
+    level() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, { type: 'triangle', dur: 0.16, vol: 0.18, delay: i * 0.08 })); },
+    over() { [392, 311.13, 233.08].forEach((f, i) => tone(f, { type: 'triangle', dur: 0.32, vol: 0.2, delay: i * 0.2 })); },
+  };
+
+  // ---------- voce ----------
+  // Usa la migliore voce italiana del dispositivo; senza voce italiana sintetizza le vocali a formanti,
+  // così una voce inglese non legge mai "i" come "ai".
+  const synth = window.speechSynthesis || null;
+  let voice = null;
+  let voiceSearchDone = !synth;
+  let speechUnlocked = false;
+  function voiceScore(v) {
+    if (!/^it([-_]|$)/i.test(v.lang || '')) return -1;
+    let s = 1;
+    if (/natural|neural|premium|enhanced|online|google/i.test(v.name)) s += 3;
+    if (/^it[-_]it$/i.test(v.lang)) s += 1;
+    return s;
+  }
+  function pickVoice() {
+    if (!synth) return;
+    try {
+      let best = null, bestScore = -1;
+      for (const v of synth.getVoices()) {
+        const s = voiceScore(v);
+        if (s > bestScore) { best = v; bestScore = s; }
+      }
+      voice = best;
+    } catch (e) { voice = null; }
+    showVoiceInfo();
+  }
+  function showVoiceInfo() {
+    const el = $('voice-name');
+    if (voice) el.textContent = `Voce: ${voice.name.replace(/^Microsoft\s+/i, '').replace(/\s+-\s+.*$/, '')}`;
+    else if (!voiceSearchDone) el.textContent = 'Cerco una voce italiana…';
+    else el.textContent = 'Nessuna voce italiana su questo dispositivo: uso una voce sintetica semplice.';
+  }
+  function unlockSpeech() {
+    // iPhone e iPad fanno parlare la pagina solo dopo un primo messaggio partito da un tocco
+    if (speechUnlocked || !synth) return;
+    speechUnlocked = true;
+    try {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      synth.speak(u);
+    } catch (e) { /* ignora */ }
+  }
+  function vowelSynth(v) {
+    ensureAudio();
+    if (!actx || muted) return;
+    const t0 = actx.currentTime + 0.02;
+    const dur = 0.5;
+    const src = actx.createOscillator();
+    src.type = 'sawtooth';
+    src.frequency.setValueAtTime(230, t0);
+    src.frequency.linearRampToValueAtTime(200, t0 + dur);
+    const env = actx.createGain();
+    env.gain.setValueAtTime(0.0001, t0);
+    env.gain.exponentialRampToValueAtTime(1, t0 + 0.04);
+    env.gain.setValueAtTime(1, t0 + dur - 0.12);
+    env.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    for (const [f, bw, g] of FORMANTS[v]) {
+      const bp = actx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = f;
+      bp.Q.value = f / bw;
+      const gain = actx.createGain();
+      gain.gain.value = g * 2.5;
+      src.connect(bp);
+      bp.connect(gain);
+      gain.connect(env);
+    }
+    env.connect(master);
+    src.start(t0);
+    src.stop(t0 + dur + 0.05);
+  }
+  // Vocali registrate una per una con una voce italiana, lente e scandite: suonano uguali su ogni dispositivo
+  const VOWEL_CLIPS = {/*CLIPS*/};
+  const SPOKEN = { A: 'à!', E: 'é!', I: 'ì!', O: 'ò!', U: 'ù!' };
+  const clipBuffers = {};
+  let clipsLoading = false;
+  let clipSource = null;
+  let voiceRun = 0;
+  let voiceChain = Promise.resolve();
+  function loadClips() {
+    if (clipsLoading || !actx) return;
+    clipsLoading = true;
+    for (const [v, url] of Object.entries(VOWEL_CLIPS)) {
+      try {
+        const bin = atob(url.split(',')[1]);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        actx.decodeAudioData(bytes.buffer).then((buf) => { clipBuffers[v] = buf; }).catch(() => {});
+      } catch (e) { /* resta la voce del dispositivo */ }
+    }
+  }
+  function playClip(v) {
+    return new Promise((resolve) => {
+      const buf = clipBuffers[v];
+      if (!actx || !buf) { resolve(); return; }
+      const src = actx.createBufferSource();
+      src.buffer = buf;
+      src.connect(voiceOut);
+      src.onended = () => { if (clipSource === src) clipSource = null; resolve(); };
+      clipSource = src;
+      src.start();
+    });
+  }
+  function sayText(text, rate) {
+    return new Promise((resolve) => {
+      if (!synth || !voice) { resolve(); return; }
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.voice = voice;
+        u.lang = voice.lang;
+        u.rate = rate;
+        u.pitch = 1;
+        u.onend = finish;
+        u.onerror = finish;
+        synth.speak(u);
+        setTimeout(finish, 1500 + text.length * 130); // a volte la fine della frase non viene segnalata
+      } catch (e) { finish(); }
+    });
+  }
+  function stopVoice() {
+    voiceRun++;
+    voiceChain = Promise.resolve();
+    if (synth) { synth.cancel(); }
+    if (clipSource) {
+      try { clipSource.stop(); } catch (e) { /* già finita */ }
+      clipSource = null;
+    }
+  }
+  // Dice le frasi una dopo l'altra: le vocali da sole sono registrazioni, il resto lo legge la voce del dispositivo
+  function speakSeq(parts, interrupt = true) {
+    if (muted) return false;
+    const vowelOf = (p) => (p.length === 1 && VOWELS.includes(p.toUpperCase()) ? p.toUpperCase() : '');
+    if (!(synth && voice) && !parts.some((p) => clipBuffers[vowelOf(p)])) return false;
+    if (interrupt) stopVoice();
+    const run = voiceRun;
+    voiceChain = voiceChain.then(async () => {
+      for (const part of parts) {
+        if (run !== voiceRun) return;
+        const v = vowelOf(part);
+        if (v && clipBuffers[v]) await playClip(v);
+        else await sayText(v ? SPOKEN[v] : part, v ? 0.7 : 0.85);
+      }
+    });
+    return true;
+  }
+  function say(v, interrupt = true) {
+    // senza registrazioni e senza voce italiana resta la vocale sintetica
+    if (!speakSeq([v], interrupt) && !muted) vowelSynth(v);
+  }
+  function praise() {
+    if (!speakSeq(['Bravo!'])) sfx.level();
+  }
+  function testVoice() {
+    ensureAudio();
+    unlockSpeech();
+    if (muted) { muted = false; prefs.muted = false; savePrefs(); updateSoundBtn(); }
+    VOWELS.forEach((v, i) => setTimeout(() => flashKey(v, 'ok'), i * 900));
+    if (!speakSeq(VOWELS)) VOWELS.forEach((v, i) => setTimeout(() => vowelSynth(v), i * 650));
+  }
+
+  // ---------- stato ----------
+  let W = 0, H = 0, dpr = 1;
+  let groundY = 0, planetR = 0, planetCx = 0, planetCy = 0, orbR = 24, shipS = 20;
+  let skyGrad = null, planetGrad = null;
+  let mode = 'menu'; // menu | play | paused | dying | over
+  let diff = 'normale';
+  let level = 1, score = 0, lives = MAX_LIVES, hits = 0, misses = 0, combo = 0;
+  let stats = freshStats();
+  let confusions = {};
+  let vowels = [], bolts = [], parts = [], texts = [], rings = [], craters = [];
+  let stars = [], spots = [];
+  let spawnT = 0.4, autoT = 1, clock = 0, shake = 0, flash = 0, dyingT = 0;
+  let call = null, callT = 0, callDelay = 0, lastCallV = null;
+  let banner = null, toast = null;
+  let recent = [];
+  const ship = { x: 0, y: 0, tx: 0, tilt: 0 };
+
+  function freshStats() {
+    const s = {};
+    VOWELS.forEach((v) => { s[v] = { hit: 0, lost: 0, wrong: 0 }; });
+    return s;
+  }
+  function resetRun() {
+    level = 1; score = 0; lives = MAX_LIVES; hits = 0; misses = 0; combo = 0;
+    stats = freshStats();
+    confusions = {};
+    call = null; lastCallV = null;
+  }
+  const bestKey = () => 'ascolta:' + diff;
+
+  // ---------- geometria ----------
+  function geometry() {
+    groundY = H - clamp(H * 0.12, 40, 90);
+    planetR = Math.max(W, 520) * 1.6;
+    planetCx = W / 2;
+    planetCy = groundY + planetR;
+    orbR = clamp(Math.min(W, H) * 0.05, 17, 30);
+    shipS = clamp(Math.min(W, H) * 0.042, 15, 24);
+    skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+    skyGrad.addColorStop(0, C.skyTop);
+    skyGrad.addColorStop(1, C.skyLow);
+    planetGrad = ctx.createLinearGradient(0, groundY, 0, H);
+    planetGrad.addColorStop(0, C.planet);
+    planetGrad.addColorStop(1, C.planetLow);
+  }
+  function surfaceY(x) {
+    const dx = x - planetCx;
+    return planetCy - Math.sqrt(Math.max(0, planetR * planetR - dx * dx));
+  }
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    const nw = Math.max(1, Math.round(r.width));
+    const nh = Math.max(1, Math.round(r.height));
+    if (W > 1 && H > 1) {
+      const sx = nw / W, sy = nh / H;
+      for (const o of vowels) { o.x *= sx; o.y *= sy; o.vy *= sy; }
+      ship.x *= sx; ship.tx *= sx;
+    } else {
+      ship.x = ship.tx = nw / 2;
+    }
+    W = nw; H = nh;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    geometry();
+    for (const o of vowels) o.r = orbR;
+  }
+
+  // ---------- vocali ----------
+  function params() {
+    const d = mode === 'menu' ? DEMO : DIFF[diff];
+    const L = mode === 'menu' ? 1 : level;
+    const slow = mode !== 'menu' ? 1.3 : 1;
+    return {
+      fall: Math.max(d.fall * Math.pow(0.9, L - 1), d.minFall) * slow,
+      spawn: Math.max(d.spawn * Math.pow(0.9, L - 1), d.minSpawn),
+    };
+  }
+  function pickVowel() {
+    const play = mode === 'play';
+    // in partita le vocali sullo schermo sono tutte diverse e non ripetono l'ultima chiamata,
+    // così la scelta è sempre chiara
+    let pool = VOWELS;
+    if (play) {
+      const free = VOWELS.filter((v) => !vowels.some((o) => o.v === v));
+      const fresh = free.filter((v) => v !== lastCallV);
+      pool = fresh.length ? fresh : free;
+    }
+    let v = pool[(Math.random() * pool.length) | 0];
+    if (!play && recent.length === 2 && recent[0] === v && recent[1] === v) {
+      v = VOWELS[(VOWELS.indexOf(v) + 1 + ((Math.random() * 4) | 0)) % 5];
+    }
+    recent.push(v);
+    if (recent.length > 2) recent.shift();
+    return v;
+  }
+  function spawnVowel() {
+    const r = orbR;
+    const margin = r + 10;
+    let x = W / 2;
+    for (let i = 0; i < 10; i++) {
+      x = margin + Math.random() * Math.max(1, W - margin * 2);
+      if (vowels.every((o) => o.y > r * 4 || Math.abs(o.x - x) > r * 2.6)) break;
+    }
+    vowels.push({
+      v: pickVowel(), x, y: -r, r,
+      vy: (groundY + r) / params().fall,
+      phase: Math.random() * TAU, locked: false, popAt: 0, tries: 0,
+    });
+  }
+  function lowest(pred) {
+    let best = null;
+    for (const o of vowels) if (pred(o) && (!best || o.y > best.y)) best = o;
+    return best;
+  }
+
+  // ---------- azioni ----------
+  function press(L) {
+    if (!VOWELS.includes(L)) { miss(`${L} non è una vocale!`); return; }
+    if (!call) { toast = { text: 'Aspetta la voce…', life: 1, max: 1 }; return; }
+    if (call.locked) return;
+    if (L === call.v) {
+      fire(call);
+      sfx.shoot();
+      flashKey(L, 'ok');
+      return;
+    }
+    call.tries++;
+    stats[call.v].wrong++;
+    const key = `${call.v}>${L}`;
+    confusions[key] = (confusions[key] || 0) + 1;
+    miss(`Hai scelto la ${L}. Riascolta!`, L);
+    callT = 0.7; // ripete subito la vocale giusta
+  }
+  function repeatCall() {
+    if (mode === 'play' && call && !call.locked) { say(call.v); callT = REPEAT_EVERY; }
+  }
+  function fire(o) {
+    o.locked = true;
+    ship.tx = clamp(o.x, shipS, W - shipS);
+    const sp = Math.max(900, H * 2.4);
+    const x = ship.x, y = ship.y - shipS;
+    bolts.push({ x, y, vx: 0, vy: -sp, sp, target: o, color: COLOR[o.v], trail: [x, y], age: 0 });
+  }
+  function miss(msg, L) {
+    misses++;
+    combo = 0;
+    toast = { text: msg, life: 1.4, max: 1.4 };
+    sfx.miss();
+    if (L) flashKey(L, 'bad');
+    if (!reduceMotion) shake = Math.max(shake, 4);
+  }
+  function hit(o) {
+    const i = vowels.indexOf(o);
+    if (i < 0) return;
+    vowels.splice(i, 1);
+    burst(o.x, o.y, COLOR[o.v], 22);
+    rings.push({ x: o.x, y: o.y, r: o.r, life: 0.45, max: 0.45, color: COLOR[o.v] });
+    if (mode !== 'play') return; // demo del menu
+    if (o === call) { lastCallV = o.v; call = null; callDelay = 1.2; }
+    combo++;
+    hits++;
+    stats[o.v].hit++;
+    const mult = Math.min(1 + Math.floor(combo / 5), 5);
+    const bonus = Math.round(5 * clamp(1 - o.y / groundY, 0, 1));
+    const pts = (10 + bonus) * mult;
+    score += pts;
+    const tx = clamp(o.x, 44, W - 44);
+    texts.push({ text: `+${pts}`, x: tx, y: o.y - o.r, vy: -50, life: 0.9, max: 0.9, color: COLOR[o.v], size: 18 });
+    if (combo % 5 === 0 && combo <= 20) {
+      texts.push({ text: `Serie x${mult}`, x: tx, y: o.y + o.r + 16, vy: -30, life: 1.1, max: 1.1, color: C.ink, size: 15 });
+    }
+    sfx.hit(o.v);
+    praise();
+    if (hits % LEVEL_EVERY === 0) {
+      level++;
+      banner = { text: `Livello ${level}`, life: 1.6, max: 1.6 };
+      sfx.level();
+    }
+    updateHud();
+  }
+  function crash(o) {
+    const sy = surfaceY(o.x);
+    // conta solo la vocale detta dalla voce
+    const counts = mode === 'play' && o === call;
+    burst(o.x, sy - 4, COLOR[o.v], counts ? 18 : 8, true);
+    if (!counts) return;
+    craters.push({ x: o.x, y: sy, life: 1.6, max: 1.6, color: COLOR[o.v] });
+    lives--;
+    combo = 0;
+    stats[o.v].lost++;
+    if (!reduceMotion) shake = 10;
+    flash = 0.5;
+    sfx.crash();
+    flashKey(o.v, 'bad');
+    lastCallV = o.v;
+    call = null;
+    callDelay = 1.6;
+    texts.push({ text: `Era la ${o.v}`, x: clamp(o.x, 70, W - 70), y: sy - 46, vy: -18, life: 1.8, max: 1.8, color: COLOR[o.v], size: 16 });
+    say(o.v);
+    updateHud();
+    if (lives <= 0) {
+      mode = 'dying';
+      dyingT = 1.4;
+      bolts.length = 0;
+      call = null;
+      vowels.forEach((v, k) => { v.popAt = clock + 0.15 + k * 0.09; });
+      sfx.over();
+      updateHud();
+    }
+  }
+  function burst(x, y, color, n, up = false) {
+    const count = Math.min(reduceMotion ? Math.ceil(n / 2) : n, Math.max(0, 600 - parts.length));
+    for (let i = 0; i < count; i++) {
+      const a = up ? -Math.PI / 2 + (Math.random() - 0.5) * 2.4 : Math.random() * TAU;
+      const s = 90 + Math.random() * 230;
+      const life = 0.45 + Math.random() * 0.5;
+      parts.push({
+        x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life, max: life,
+        color: Math.random() < 0.2 ? C.ink : color, size: 1.5 + Math.random() * 2.5,
+      });
+    }
+  }
+  function flashKey(v, kind) {
+    const el = keyEls[v];
+    if (!el) return;
+    el.classList.remove('ok', 'bad');
+    void el.offsetWidth;
+    el.classList.add(kind);
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove(kind), 220);
+  }
+
+  // ---------- flusso di gioco ----------
+  function selectedDiff() {
+    const r = document.querySelector('input[name="diff"]:checked');
+    return r && DIFF[r.value] ? r.value : 'normale';
+  }
+  function showOverlay(name) {
+    overlays.menu.hidden = name !== 'menu';
+    overlays.pause.hidden = name !== 'pause';
+    overlays.over.hidden = name !== 'over';
+  }
+  function startGame() {
+    ensureAudio();
+    unlockSpeech();
+    diff = selectedDiff();
+    prefs.diff = diff;
+    // senza voce non si può giocare: riattiva l'audio
+    if (muted) { muted = false; prefs.muted = false; updateSoundBtn(); }
+    savePrefs();
+    resetRun();
+    for (const o of vowels) burst(o.x, o.y, COLOR[o.v], 8);
+    vowels.length = 0;
+    bolts.length = 0;
+    toast = null;
+    spawnT = 0.9;
+    callDelay = 1.6;
+    banner = { text: 'Via!', life: 1.1, max: 1.1 };
+    ship.tx = W / 2;
+    mode = 'play';
+    showOverlay(null);
+    updateHud();
+  }
+  function pause() {
+    if (mode !== 'play') return;
+    mode = 'paused';
+    stopVoice();
+    showOverlay('pause');
+    updateHud();
+  }
+  function resume() {
+    if (mode !== 'paused') return;
+    ensureAudio();
+    unlockSpeech();
+    mode = 'play';
+    if (call) callT = 0.4;
+    showOverlay(null);
+    updateHud();
+  }
+  function toMenu() {
+    resetRun();
+    vowels.length = 0;
+    bolts.length = 0;
+    toast = null;
+    banner = null;
+    spawnT = 0.4;
+    autoT = 1;
+    mode = 'menu';
+    showOverlay('menu');
+    updateHud();
+  }
+  function showOver() {
+    mode = 'over';
+    const record = score > (prefs.best[bestKey()] || 0);
+    if (record) { prefs.best[bestKey()] = score; savePrefs(); }
+    $('over-score').textContent = score;
+    $('over-record').hidden = !record;
+    $('over-level').textContent = level;
+    $('over-hits').textContent = hits;
+    $('over-acc').textContent = hits + misses ? Math.round((hits / (hits + misses)) * 100) + '%' : '–';
+    $('over-vowels').innerHTML = VOWELS.map((v) => {
+      const s = stats[v];
+      const errors = s.wrong + s.lost;
+      const second = `${errors} ${errors === 1 ? 'errore' : 'errori'}`;
+      return `<li style="--c:var(--v-${v.toLowerCase()})"><b>${v}</b>` +
+        `<span>${s.hit} ${s.hit === 1 ? 'colpita' : 'colpite'}</span><span>${second}</span></li>`;
+    }).join('');
+    let tip = '';
+    const topSwap = Object.entries(confusions).sort((a, b) => b[1] - a[1])[0];
+    if (topSwap) {
+      const [said, chosen] = topSwap[0].split('>');
+      const n = topSwap[1];
+      tip = `Da ripassare: hai scambiato la ${said} con la ${chosen} ${n === 1 ? 'una volta' : n + ' volte'}.`;
+    } else {
+      const maxLost = Math.max(...VOWELS.map((v) => stats[v].lost));
+      const worst = VOWELS.filter((v) => stats[v].lost === maxLost);
+      tip = 'Nessuna vocale è caduta sul pianeta.';
+      if (maxLost > 0 && worst.length === 1) {
+        tip = `Da ripassare: la ${worst[0]}, caduta ${maxLost === 1 ? 'una volta' : maxLost + ' volte'} sul pianeta.`;
+      } else if (maxLost > 0) {
+        const names = worst.map((v) => `la ${v}`);
+        tip = `Da ripassare: ${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}.`;
+      }
+    }
+    $('over-tip').textContent = tip;
+    showOverlay('over');
+    updateHud();
+  }
+  function updateHud() {
+    hud.score.textContent = score;
+    hud.level.textContent = level;
+    hud.best.textContent = Math.max(prefs.best[bestKey()] || 0, mode === 'menu' ? 0 : score);
+    let lv = '';
+    for (let i = 0; i < MAX_LIVES; i++) lv += `<i class="life${i < lives ? '' : ' gone'}"></i>`;
+    hud.lives.innerHTML = lv;
+    hud.lives.setAttribute('aria-label', `${lives} ${lives === 1 ? 'vita' : 'vite'}`);
+    btnPause.disabled = !(mode === 'play' || mode === 'paused');
+    $('ic-pause').toggleAttribute('hidden', mode === 'paused');
+    $('ic-play').toggleAttribute('hidden', mode !== 'paused');
+    btnPause.setAttribute('aria-label', mode === 'paused' ? 'Riprendi' : 'Pausa');
+    btnRepeat.hidden = mode !== 'play';
+  }
+  function updateSoundBtn() {
+    btnSound.setAttribute('aria-pressed', String(!muted));
+    btnSound.setAttribute('aria-label', muted ? 'Attiva audio' : 'Disattiva audio');
+    btnSound.title = muted ? 'Audio spento' : 'Audio acceso';
+    $('ic-sound-on').toggleAttribute('hidden', muted);
+    $('ic-sound-off').toggleAttribute('hidden', !muted);
+  }
+
+  // ---------- aggiornamento ----------
+  function tick(list, dt, fn) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const it = list[i];
+      it.life -= dt;
+      if (it.life <= 0) list.splice(i, 1);
+      else if (fn) fn(it);
+    }
+  }
+  function updateBolts(dt) {
+    for (let i = bolts.length - 1; i >= 0; i--) {
+      const b = bolts[i];
+      b.age += dt;
+      const t = b.target && vowels.includes(b.target) ? b.target : null;
+      if (!t) b.target = null;
+      let dx = 0, dy = -1;
+      if (t) { dx = t.x - b.x; dy = t.y - b.y; }
+      const d = Math.hypot(dx, dy) || 1;
+      const k = 1 - Math.exp(-(12 + b.age * 80) * dt);
+      b.vx += ((dx / d) * b.sp - b.vx) * k;
+      b.vy += ((dy / d) * b.sp - b.vy) * k;
+      const step = Math.hypot(b.vx, b.vy) * dt;
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.trail.push(b.x, b.y);
+      if (b.trail.length > 16) b.trail.splice(0, 2);
+      if (t && (Math.hypot(t.x - b.x, t.y - b.y) < t.r + step * 0.6 + 4 || b.age > 0.9)) {
+        bolts.splice(i, 1);
+        hit(t);
+        continue;
+      }
+      if (b.y < -60 || b.x < -60 || b.x > W + 60 || b.age > 2.5) bolts.splice(i, 1);
+    }
+  }
+  function updateCall(dt) {
+    if (call) {
+      if (!call.locked) {
+        callT -= dt;
+        if (callT <= 0) { say(call.v); callT = REPEAT_EVERY; }
+      }
+      return;
+    }
+    callDelay -= dt;
+    if (callDelay > 0) return;
+    const pool = vowels.filter((o) => o.y > o.r && o.y < groundY * 0.55);
+    if (!pool.length) return;
+    const fresh = pool.filter((o) => o.v !== lastCallV);
+    const from = fresh.length ? fresh : pool;
+    call = from[(Math.random() * from.length) | 0];
+    call.tries = 0;
+    say(call.v, false); // aspetta che finisca il «Bravo!»
+    callT = REPEAT_EVERY;
+  }
+  function update(dt) {
+    clock += dt;
+    const starSpeed = reduceMotion ? 0.003 : (mode === 'play' ? 0.028 + level * 0.004 : 0.018);
+    for (const s of stars) {
+      s.y += s.z * starSpeed * dt;
+      if (s.y > 1) { s.y -= 1; s.x = Math.random(); }
+    }
+
+    const listen = mode === 'play';
+    if (mode === 'play' || mode === 'menu') {
+      spawnT -= dt;
+      if (spawnT <= 0) {
+        // in partita contano solo le vocali ancora in alto, quelle che la voce può chiamare
+        const active = listen ? vowels.filter((o) => o.y < groundY * 0.55).length : vowels.length;
+        const maxOn = listen ? Math.min(3 + Math.floor((level - 1) / 3), 4) : 2;
+        if (active < maxOn && vowels.length < VOWELS.length) {
+          spawnVowel();
+          spawnT = params().spawn * (0.75 + Math.random() * 0.5);
+          if (listen && active + 1 < 2) spawnT = Math.min(spawnT, 0.7);
+        } else {
+          spawnT = 0.6;
+        }
+      }
+    }
+
+    for (let i = vowels.length - 1; i >= 0; i--) {
+      const o = vowels[i];
+      if (mode === 'dying') {
+        if (clock >= o.popAt) { vowels.splice(i, 1); burst(o.x, o.y, COLOR[o.v], 14); }
+        continue;
+      }
+      o.y += o.vy * dt;
+      if (o.y + o.r * 0.6 >= surfaceY(o.x)) { vowels.splice(i, 1); crash(o); }
+    }
+
+    if (mode === 'play') updateCall(dt);
+
+    if (mode === 'menu') {
+      autoT -= dt;
+      if (autoT <= 0) {
+        autoT = 0.55 + Math.random() * 0.8;
+        const o = lowest((x) => !x.locked && x.y > H * 0.2);
+        if (o) { fire(o); flashKey(o.v, 'ok'); }
+      }
+    }
+
+    const prevX = ship.x;
+    ship.x += (ship.tx - ship.x) * (1 - Math.exp(-10 * dt));
+    const vx = dt > 0 ? (ship.x - prevX) / dt : 0;
+    ship.tilt += (clamp(vx / 1800, -0.4, 0.4) - ship.tilt) * (1 - Math.exp(-12 * dt));
+    ship.y = surfaceY(ship.x) - shipS * 1.9 + Math.sin(clock * 3) * 2;
+
+    updateBolts(dt);
+
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.life -= dt;
+      if (p.life <= 0) { parts.splice(i, 1); continue; }
+      p.vx *= 1 - 1.6 * dt;
+      p.vy = p.vy * (1 - 1.6 * dt) + 320 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+    tick(texts, dt, (t) => { t.y += t.vy * dt; });
+    tick(rings, dt, (r) => { r.r += 150 * dt; });
+    tick(craters, dt);
+    if (toast && (toast.life -= dt) <= 0) toast = null;
+    if (banner && (banner.life -= dt) <= 0) banner = null;
+    shake = Math.max(0, shake - 40 * dt);
+    flash = Math.max(0, flash - 1.4 * dt);
+
+    if (mode === 'dying') {
+      dyingT -= dt;
+      if (dyingT <= 0 && vowels.length === 0) showOver();
+    }
+  }
+
+  // ---------- disegno ----------
+  function pill(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function drawStars() {
+    ctx.fillStyle = C.ink;
+    for (const s of stars) {
+      ctx.globalAlpha = (0.2 + 0.55 * s.z) * (0.75 + 0.25 * Math.sin(clock * 2 + s.tw));
+      const sz = s.z > 0.85 ? 2 : s.z > 0.5 ? 1.5 : 1;
+      ctx.fillRect(s.x * W, s.y * H, sz, sz);
+    }
+    ctx.globalAlpha = 1;
+  }
+  function drawPlanet() {
+    ctx.fillStyle = planetGrad;
+    ctx.beginPath();
+    ctx.arc(planetCx, planetCy, planetR, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = rgba(C.planetLow, 0.6);
+    for (const s of spots) {
+      const x = s.xr * W;
+      ctx.beginPath();
+      ctx.ellipse(x, surfaceY(x) + (H - groundY) * s.d, s.rx, s.ry, 0, 0, TAU);
+      ctx.fill();
+    }
+    ctx.strokeStyle = rgba(C.ink, 0.28);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(planetCx, planetCy, planetR, Math.PI, TAU);
+    ctx.stroke();
+    for (const c of craters) {
+      const a = c.life / c.max;
+      ctx.strokeStyle = rgba(c.color, a * 0.85);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y + 2, 18 + (1 - a) * 26, 5 + (1 - a) * 6, 0, 0, TAU);
+      ctx.stroke();
+    }
+  }
+  function drawVowel(o) {
+    const c = COLOR[o.v];
+    const r = o.r;
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    const g = ctx.createLinearGradient(0, -r * 3.4, 0, 0);
+    g.addColorStop(0, rgba(c, 0));
+    g.addColorStop(1, rgba(c, 0.4));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.72, -r * 0.2);
+    ctx.lineTo(0, -r * 3.4);
+    ctx.lineTo(r * 0.72, -r * 0.2);
+    ctx.closePath();
+    ctx.fill();
+    if (o === call && o.tries >= 2 && !o.locked) {
+      // aiuto dopo due tentativi sbagliati
+      const p = 0.5 + 0.5 * Math.sin(clock * 6);
+      ctx.strokeStyle = rgba(C.ink, 0.5 + 0.4 * p);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 7 + p * 4, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.rotate(Math.sin(clock * 2.2 + o.phase) * 0.14);
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = rgba(C.ink, 0.35);
+    ctx.beginPath();
+    ctx.arc(-r * 0.38, -r * 0.38, r * 0.3, 0, TAU);
+    ctx.fill();
+    if (o.locked) {
+      ctx.strokeStyle = rgba(C.ink, 0.9);
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.lineDashOffset = -clock * 30;
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 6, 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.fillStyle = C.skyTop;
+    ctx.font = `${Math.round(r * 1.1)}px ${DISPLAY}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(o.v, 0, r * 0.08);
+    ctx.restore();
+  }
+  function drawBolts() {
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const b of bolts) {
+      const tr = b.trail;
+      if (tr.length < 4) continue;
+      ctx.beginPath();
+      ctx.moveTo(tr[0], tr[1]);
+      for (let i = 2; i < tr.length; i += 2) ctx.lineTo(tr[i], tr[i + 1]);
+      ctx.strokeStyle = rgba(b.color, 0.6);
+      ctx.lineWidth = 7;
+      ctx.stroke();
+      ctx.strokeStyle = C.ink;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+  }
+  function drawShip() {
+    const s = shipS;
+    ctx.save();
+    ctx.translate(ship.x, ship.y);
+    ctx.rotate(ship.tilt);
+    const fl = s * (0.75 + Math.sin(clock * 40) * 0.12 + Math.random() * 0.12);
+    ctx.fillStyle = C.flame;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.3, s * 0.55);
+    ctx.quadraticCurveTo(0, s * 0.55 + fl * 1.3, s * 0.3, s * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = COLOR.E;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.15, s * 0.55);
+    ctx.quadraticCurveTo(0, s * 0.55 + fl * 0.7, s * 0.15, s * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = C.wing;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.32, -s * 0.05);
+    ctx.lineTo(-s * 0.95, s * 0.72);
+    ctx.lineTo(-s * 0.3, s * 0.52);
+    ctx.closePath();
+    ctx.moveTo(s * 0.32, -s * 0.05);
+    ctx.lineTo(s * 0.95, s * 0.72);
+    ctx.lineTo(s * 0.3, s * 0.52);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = C.hull;
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    ctx.bezierCurveTo(s * 0.55, -s * 0.5, s * 0.45, s * 0.3, s * 0.34, s * 0.6);
+    ctx.lineTo(-s * 0.34, s * 0.6);
+    ctx.bezierCurveTo(-s * 0.45, s * 0.3, -s * 0.55, -s * 0.5, 0, -s);
+    ctx.fill();
+    ctx.fillStyle = C.skyTop;
+    ctx.beginPath();
+    ctx.arc(0, -s * 0.22, s * 0.2, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = COLOR.O;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawEffects() {
+    for (const p of parts) {
+      ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, TAU);
+      ctx.fill();
+    }
+    for (const r of rings) {
+      ctx.globalAlpha = clamp(r.life / r.max, 0, 1);
+      ctx.strokeStyle = r.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, r.r, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    for (const t of texts) {
+      ctx.globalAlpha = clamp((t.life / t.max) * 1.6, 0, 1);
+      ctx.font = `${t.size}px ${DISPLAY}`;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = C.skyTop;
+      ctx.strokeText(t.text, t.x, t.y);
+      ctx.fillStyle = t.color;
+      ctx.fillText(t.text, t.x, t.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+  function drawToast() {
+    if (!toast) return;
+    ctx.globalAlpha = Math.min(1, toast.life / 0.3);
+    ctx.font = `700 15px ${BODY}`;
+    const tw = ctx.measureText(toast.text).width + 26;
+    const th = 30;
+    const x = clamp(ship.x - tw / 2, 8, W - tw - 8);
+    const y = ship.y - shipS * 2.4 - th - (1 - toast.life / toast.max) * 10;
+    pill(x, y, tw, th, 15);
+    ctx.fillStyle = rgba(C.skyTop, 0.92);
+    ctx.fill();
+    ctx.strokeStyle = C.danger;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = C.ink;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(toast.text, x + tw / 2, y + th / 2 + 1);
+    ctx.globalAlpha = 1;
+  }
+  function drawBanner() {
+    if (!banner) return;
+    const p = 1 - banner.life / banner.max;
+    ctx.globalAlpha = banner.life < 0.4 ? banner.life / 0.4 : Math.min(1, p * 6);
+    const size = clamp(W * 0.075, 26, 54) * (reduceMotion ? 1 : 1 + 0.08 * p);
+    ctx.font = `${size}px ${DISPLAY}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = C.skyTop;
+    ctx.strokeText(banner.text.toUpperCase(), W / 2, H * 0.38);
+    ctx.fillStyle = C.ink;
+    ctx.fillText(banner.text.toUpperCase(), W / 2, H * 0.38);
+    ctx.globalAlpha = 1;
+  }
+  function render() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = skyGrad || C.skyTop;
+    ctx.fillRect(0, 0, W, H);
+    if (shake > 0.3) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    drawStars();
+    drawPlanet();
+    for (const o of vowels) drawVowel(o);
+    drawBolts();
+    drawShip();
+    drawEffects();
+    drawToast();
+    drawBanner();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (flash > 0) {
+      ctx.fillStyle = rgba(C.danger, flash * 0.3);
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  let lastT = 0;
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000));
+    lastT = now;
+    if (mode !== 'paused') update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- input ----------
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+    const onControl = e.target && e.target.closest && e.target.closest('button, input');
+    if ((k === ' ' || k === 'Enter') && onControl && !(k === 'Enter' && e.target.type === 'radio')) return;
+    if (k === ' ' || k === 'Spacebar') {
+      e.preventDefault();
+      if (e.repeat) return;
+      if (mode === 'play') pause();
+      else if (mode === 'paused') resume();
+      else if (mode === 'menu' || mode === 'over') startGame();
+      return;
+    }
+    if (k === 'Escape') {
+      if (mode === 'play') pause();
+      else if (mode === 'paused') resume();
+      return;
+    }
+    if (k === 'Enter') {
+      if (mode === 'menu' || mode === 'over') { e.preventDefault(); startGame(); }
+      else if (mode === 'play') { e.preventDefault(); repeatCall(); }
+      return;
+    }
+    if (e.repeat || !k || k.length !== 1) return;
+    const L = k.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    if (!/^[A-Z]$/.test(L)) return;
+    if (mode === 'play') {
+      e.preventDefault();
+      ensureAudio();
+      press(L);
+    } else if (mode === 'menu' && VOWELS.includes(L)) {
+      flashKey(L, 'ok');
+    }
+  });
+  Object.keys(keyEls).forEach((v) => {
+    keyEls[v].addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      ensureAudio();
+      unlockSpeech();
+      if (mode === 'play') press(v);
+      else flashKey(v, 'ok');
+    });
+  });
+  $('btn-start').addEventListener('click', startGame);
+  $('btn-again').addEventListener('click', startGame);
+  $('btn-resume').addEventListener('click', resume);
+  $('btn-quit').addEventListener('click', toMenu);
+  $('btn-menu').addEventListener('click', toMenu);
+  $('btn-voice').addEventListener('click', testVoice);
+  btnRepeat.addEventListener('click', () => {
+    unlockSpeech();
+    repeatCall();
+    btnRepeat.blur();
+  });
+  btnPause.addEventListener('click', () => {
+    if (mode === 'play') pause(); else resume();
+    btnPause.blur();
+  });
+  btnSound.addEventListener('click', () => {
+    muted = !muted;
+    prefs.muted = muted;
+    savePrefs();
+    if (!muted) ensureAudio();
+    else stopVoice();
+    updateSoundBtn();
+    btnSound.blur();
+  });
+  document.querySelectorAll('input[name="diff"]').forEach((r) => {
+    r.addEventListener('change', () => {
+      diff = selectedDiff();
+      prefs.diff = diff;
+      savePrefs();
+      updateHud();
+    });
+  });
+  window.addEventListener('blur', () => { if (mode === 'play') pause(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'play') pause(); });
+
+  // ---------- avvio ----------
+  function snapshot() {
+    const live = mode === 'play' || mode === 'paused';
+    return {
+      prefs,
+      run: live ? {
+        diff, level, score, lives, hits, misses, combo, stats, confusions,
+        vowels: vowels.map((o) => ({ v: o.v, xr: o.x / W, yr: o.y / H, vyr: o.vy / H })),
+      } : null,
+    };
+  }
+  function findVoices() {
+    if (!synth) { showVoiceInfo(); return; }
+    pickVoice();
+    try {
+      synth.addEventListener('voiceschanged', () => { voiceSearchDone = true; pickVoice(); });
+    } catch (e) { /* ignora */ }
+    // alcuni browser (Safari) non segnalano quando le voci sono pronte
+    let tries = 0;
+    const poll = setInterval(() => {
+      tries++;
+      pickVoice();
+      if (voice || tries >= 12) {
+        voiceSearchDone = true;
+        showVoiceInfo();
+        clearInterval(poll);
+      }
+    }, 250);
+  }
+  function start(data) {
+    data = data || {};
+    if (data.prefs) prefs = { ...prefs, ...data.prefs, best: { ...prefs.best, ...(data.prefs.best || {}) } };
+    diff = DIFF[prefs.diff] ? prefs.diff : 'normale';
+    $('d-' + diff).checked = true;
+    muted = !!prefs.muted;
+    updateSoundBtn();
+    findVoices();
+
+    stars = Array.from({ length: 150 }, () => ({ x: Math.random(), y: Math.random(), z: 0.25 + Math.random() * 0.75, tw: Math.random() * TAU }));
+    spots = Array.from({ length: 9 }, () => ({ xr: Math.random(), d: 0.25 + Math.random() * 0.6, rx: 10 + Math.random() * 26, ry: 3 + Math.random() * 6 }));
+    resize();
+    if ('ResizeObserver' in window) new ResizeObserver(resize).observe(stage);
+    else window.addEventListener('resize', resize);
+
+    const run = data.run;
+    if (run && run.lives > 0) {
+      diff = DIFF[run.diff] ? run.diff : diff;
+      $('d-' + diff).checked = true;
+      level = run.level || 1;
+      score = run.score || 0;
+      lives = clamp(run.lives, 1, MAX_LIVES);
+      hits = run.hits || 0;
+      misses = run.misses || 0;
+      combo = run.combo || 0;
+      stats = { ...freshStats(), ...(run.stats || {}) };
+      VOWELS.forEach((v) => { stats[v] = { hit: 0, lost: 0, wrong: 0, ...stats[v] }; });
+      confusions = run.confusions || {};
+      vowels = (run.vowels || []).map((o) => ({
+        v: o.v, x: o.xr * W, y: o.yr * H, vy: o.vyr * H, r: orbR,
+        phase: Math.random() * TAU, locked: false, popAt: 0, tries: 0,
+      }));
+      callDelay = 1;
+      mode = 'paused';
+      showOverlay('pause');
+    } else {
+      mode = 'menu';
+      showOverlay('menu');
+    }
+    updateHud();
+    try { window.claude?.hot?.snapshot?.(snapshot); } catch (e) { /* non in un viewer */ }
+    requestAnimationFrame((t) => { lastT = t; requestAnimationFrame(frame); });
+  }
+
+  window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
