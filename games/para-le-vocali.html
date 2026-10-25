@@ -348,7 +348,7 @@ kbd {
             <span class="glyph" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" style="fill:var(--ink)"/><path d="M12 7.5l3.2 2.3-1.2 3.8h-4l-1.2-3.8z" style="fill:var(--bg)"/><path d="M12 2.2v5.3M15.2 9.8l5-1.6M14 13.6l3 4.2M10 13.6l-3 4.2M8.8 9.8l-5-1.6" style="stroke:var(--bg);stroke-width:1.2;fill:none"/></svg>
             </span>
-            <p>Il Dieci tira un rigore! Il pallone porta una vocale e impiega 30 secondi ad arrivare in porta.</p>
+            <p>Il Dieci tira un rigore! Guarda il pallone e ascolta la vocale: hai 30 secondi per parare.</p>
           </li>
           <li>
             <span class="glyph" aria-hidden="true">
@@ -363,13 +363,6 @@ kbd {
             <p>Durante il volo, scegli la vocale giusta per parare. Hai 30 secondi per ogni rigore. Se il pallone arriva in porta, è gol. Una partita sono 10 rigori.</p>
           </li>
         </ul>
-        <fieldset class="speed">
-          <legend>Livello</legend>
-          <div class="seg">
-            <input type="radio" name="level" id="l-1" value="1" checked><label for="l-1">Guarda e ascolta</label>
-            <input type="radio" name="level" id="l-2" value="2"><label for="l-2">Solo ascolto</label>
-          </div>
-        </fieldset>
         <div class="voice-row">
           <p class="fine" id="voice-name">Cerco una voce italiana…</p>
           <button class="btn ghost small" id="btn-voice" type="button">Prova la voce</button>
@@ -379,7 +372,7 @@ kbd {
           <span class="hint">oppure premi <kbd>Invio</kbd></span>
         </div>
         <p class="fine" id="menu-note" hidden></p>
-        <p class="fine">Con «Solo ascolto» il pallone mostra un punto di domanda: la vocale si sente soltanto. Al computer puoi premere anche i tasti <kbd>A</kbd> <kbd>E</kbd> <kbd>I</kbd> <kbd>O</kbd> <kbd>U</kbd>.</p>
+        <p class="fine">Sul pallone non ci sono lettere: ascolta il suono e scegli la vocale corrispondente. Al computer puoi premere anche i tasti <kbd>A</kbd> <kbd>E</kbd> <kbd>I</kbd> <kbd>O</kbd> <kbd>U</kbd>.</p>
       </div>
     </section>
 
@@ -739,7 +732,7 @@ kbd {
   let W = 0, H = 0, dpr = 1;
   const field = { standsH: 0, farY: 0, nearY: 0, sh: 100, R0: 14, postL: 0, postR: 0, postTop: 0, postW: 6, kh: 200 };
   let crowd = [];
-  let level = 1;
+  let level = 2;
   let phase = 'menu'; // menu | kickoff | run | shot | saved | scored | next | final | summary
   let paused = false;
   let phaseT = 0, clock = 0;
@@ -800,10 +793,7 @@ kbd {
 
   Learning.setVoice(text => { ensureAudio(); unlockSpeech(); speakSeq([text]); });
   // ---------- partita ----------
-  function selectedLevel() {
-    const r = document.querySelector('input[name="level"]:checked');
-    return r && r.value === '2' ? 2 : 1;
-  }
+  function selectedLevel() { return 2; }
   function pickVowel() {
     // le vocali uscite meno volte hanno la precedenza, e mai la stessa due volte di fila
     return Learning.pick(lastVowel);
@@ -1179,16 +1169,6 @@ kbd {
       ctx.closePath();
       ctx.fill();
     }
-    if (!v || r < 9) return;
-    ctx.font = `700 ${Math.round(r * 1.15)}px ${BODY}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = Math.max(3, r * 0.22);
-    ctx.strokeStyle = '#ffffff';
-    ctx.strokeText(v, x, y + r * 0.06);
-    ctx.fillStyle = v === '?' ? '#0a101e' : INK[v];
-    ctx.fillText(v, x, y + r * 0.06);
   }
   // Il Dieci visto di fronte mentre corre verso la porta
   function drawStriker(x, y, s, kicking) {
@@ -1343,47 +1323,6 @@ kbd {
       ctx.stroke();
     }
   }
-  function drawBubble(x, top, bottom, half, v) {
-    const size = clamp(H * 0.08, 30, 64);
-    const w = size * 1.25, h = size * 1.15;
-    const minY = field.standsH + 4;
-    let bx, by;
-    ctx.fillStyle = '#ffffff';
-    if (top - h - 12 >= minY) {
-      bx = clamp(x - w / 2, 8, W - w - 8);
-      by = top - h - 12;
-      const tx = clamp(x, bx + 10, bx + w - 10);
-      ctx.beginPath();
-      ctx.moveTo(tx - 8, by + h - 1);
-      ctx.lineTo(tx + 8, by + h - 1);
-      ctx.lineTo(tx, by + h + 10);
-      ctx.closePath();
-      ctx.fill();
-    } else {
-      // sopra la testa non c'è spazio: il fumetto va di fianco, così il Dieci si vede sempre
-      const right = x + half + 14 + w < W - 8;
-      bx = right ? x + half + 14 : x - half - 14 - w;
-      by = clamp((top + bottom) / 2 - h / 2, minY, H - h - 8);
-      const ey = by + h / 2;
-      ctx.beginPath();
-      ctx.moveTo(right ? bx + 1 : bx + w - 1, ey - 8);
-      ctx.lineTo(right ? bx + 1 : bx + w - 1, ey + 8);
-      ctx.lineTo(right ? bx - 10 : bx + w + 10, ey);
-      ctx.closePath();
-      ctx.fill();
-    }
-    rr(bx, by, w, h, size * 0.25);
-    ctx.fill();
-    ctx.strokeStyle = v === '?' ? '#0a101e' : COLOR[v];
-    ctx.lineWidth = 4;
-    rr(bx, by, w, h, size * 0.25);
-    ctx.stroke();
-    ctx.font = `700 ${Math.round(size * 0.95)}px ${BODY}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = v === '?' ? '#0a101e' : INK[v];
-    ctx.fillText(v, bx + w / 2, by + h / 2 + size * 0.05);
-  }
   function drawTimer() {
     if (phase !== 'run') return;
     const left = Math.max(0, RUN_TIME - phaseT);
@@ -1437,15 +1376,15 @@ kbd {
     drawKeeper();
     if (phase === 'run' && round) {
       const ball = penaltyFlight(phaseT / RUN_TIME);
-      drawBall(level === 2 ? '?' : round.v, ball.x, ball.y, ball.r, reduceMotion ? 0 : clock * 4);
+      drawBall('', ball.x, ball.y, ball.r, reduceMotion ? 0 : clock * 4);
     }
     if (phase === 'shot') {
       const t = clamp(phaseT / 0.62, 0, 1);
       const e = easeIn(t * 0.6 + 0.4 * t);
-      drawBall(level === 2 ? '?' : round.v, lerp(shot.x0, shot.tx, e), lerp(shot.y0, shot.ty, e) - Math.sin(Math.PI * t) * H * 0.06, lerp(shot.r0, shot.tr, e), clock * 10);
+      drawBall('', lerp(shot.x0, shot.tx, e), lerp(shot.y0, shot.ty, e) - Math.sin(Math.PI * t) * H * 0.06, lerp(shot.r0, shot.tr, e), clock * 10);
     }
     if (phase === 'saved' && keeper.holding) {
-      drawBall(round.v, shot.tx, shot.ty, shot.tr, 0);
+      drawBall('', shot.tx, shot.ty, shot.tr, 0);
     }
     if (phase === 'scored') {
       // il pallone finisce in rete, dietro di noi
@@ -1462,10 +1401,6 @@ kbd {
       ctx.restore();
     }
     ctx.globalAlpha = 1;
-    if (phase === 'run' && round) {
-      const ball = penaltyFlight(phaseT / RUN_TIME);
-      drawBubble(ball.x, ball.y - ball.r * 2, ball.y - ball.r, ball.r, level === 2 ? '?' : round.v);
-    }
     drawBanner();
   }
 
@@ -1534,13 +1469,6 @@ kbd {
     if (!muted) ensureAudio();
     btnSound.blur();
   });
-  document.querySelectorAll('input[name="level"]').forEach((r) => {
-    r.addEventListener('change', () => {
-      level = selectedLevel();
-      data.level = level;
-      saveData();
-    });
-  });
   window.addEventListener('blur', pause);
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 
@@ -1548,8 +1476,7 @@ kbd {
   function start(saved) {
     saved = saved || {};
     if (saved.data) data = { ...data, ...saved.data };
-    level = data.level === 2 ? 2 : 1;
-    $('l-' + level).checked = true;
+    level = 2;
     setMuted(!!data.muted);
     findVoices();
     resize();

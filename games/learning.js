@@ -2,6 +2,12 @@
 (() => {
   'use strict';
   const gamesBase = new URL('.', document.currentScript.src);
+  const refreshToken = new URL(location.href).searchParams.get('refresh');
+  function freshLink(url) {
+    const target = new URL(url, location.href);
+    if (refreshToken) target.searchParams.set('refresh', refreshToken);
+    return target.href;
+  }
   const vowels = ['A', 'E', 'I', 'O', 'U'];
   const key = 'vocali-learning-v1';
   const defaults = { vowels: ['A', 'E', 'I', 'O', 'U'], challenge: false, autonomous: false, neutral: false, effects: true, writing: true, lower: false };
@@ -129,6 +135,7 @@
     d.showModal(); draw();
   };
   function mount() {
+    if (refreshToken) document.querySelectorAll('a.game, a.home-link').forEach(a => { a.href = freshLink(a.href); });
     document.body.classList.toggle('learn-neutral',settings.neutral);
     const home = !document.querySelector('#ov-menu');
     const host = home ? document.querySelector('header') : document.querySelector('#ov-menu .card');
@@ -153,7 +160,7 @@
       const label=document.createElement('label'); label.textContent='Lettere nella lettura: '; const select=document.createElement('select'); select.innerHTML='<option value="upper">MAIUSCOLE</option><option value="lower">minuscole</option>'; select.value=settings.lower?'lower':'upper'; select.onchange=()=> {settings.lower=select.value==='lower';save();}; label.append(select); options.append(label);
     }
     const actions=panel.querySelector('#learn-actions');
-    button(actions,'Ascolta e trova',()=> { location.href=new URL('gol-delle-vocali.html', gamesBase).href; });
+    button(actions,'Ascolta e trova',()=> { location.href=freshLink(new URL('gol-delle-vocali.html', gamesBase).href); });
     button(actions,'Leggi',reading);
     button(actions,'Scrivi',()=> { api.write(pick(),()=>speak('Bravo! Ora prova anche su carta.')); });
     button(actions,'Come si gioca',()=> { const d=dialog('Proviamo insieme'); const p=document.createElement('p'); p.textContent='Ascolta la vocale, ripetila e cerca la stessa lettera. Nel gioco della lettura, di’ la lettera prima di ascoltarla. Nella Miniera ripassa la lettera: il gioco controlla il tratto e continua automaticamente. Puoi riascoltare e riprovare.'; d.append(p); button(d,'Ascolta la spiegazione',()=>speak(p.textContent)); button(d,'Ho capito',()=>d.close()); d.showModal(); });
