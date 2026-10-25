@@ -2,7 +2,7 @@
 
 Apri i giochi online: **[https://pamaldi.github.io/letters-games/](https://pamaldi.github.io/letters-games/)**.
 
-Apri `index.html` per scegliere un gioco o un'attività del percorso.
+Apri [`../index.html`](../index.html) per scegliere un gioco o un'attività del percorso.
 
 ## Percorso
 
@@ -20,7 +20,7 @@ Il controllo della scrittura confronta copertura e vicinanza del tratto con un m
 
 ## Pubblicazione su GitHub Pages
 
-Carica nella stessa cartella tutti i file HTML dei giochi, `index.html`, **`learning.js` e `learning.css`**. I due file condivisi sono necessari: caricare soltanto gli HTML non basta. Non serve una compilazione.
+Carica `index.html` nella radice del repository e conserva la cartella `games/` con tutti i file HTML dei giochi, **`learning.js` e `learning.css`** al suo interno. I due file condivisi sono necessari: caricare soltanto gli HTML non basta. Non serve una compilazione.
 
 ## Verifica
 
