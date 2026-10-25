@@ -338,7 +338,7 @@ kbd {
   </header>
 
   <main class="stage" id="stage">
-    <canvas id="game" aria-label="Lo stadio visto dalla porta: il Dieci arriva dribblando con il pallone della vocale, il portiere deve pararla"></canvas>
+    <canvas id="game" aria-label="Un rigore visto dalla porta: il Dieci tira e il pallone vola per 30 secondi; scegli la vocale per parare"></canvas>
 
     <section class="overlay" id="ov-menu" aria-labelledby="menu-title">
       <div class="card">
@@ -348,7 +348,7 @@ kbd {
             <span class="glyph" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" style="fill:var(--ink)"/><path d="M12 7.5l3.2 2.3-1.2 3.8h-4l-1.2-3.8z" style="fill:var(--bg)"/><path d="M12 2.2v5.3M15.2 9.8l5-1.6M14 13.6l3 4.2M10 13.6l-3 4.2M8.8 9.8l-5-1.6" style="stroke:var(--bg);stroke-width:1.2;fill:none"/></svg>
             </span>
-            <p>Il Dieci parte da lontano con un pallone che porta una vocale. Dribbla i difensori e arriva piano piano, in 40 secondi.</p>
+            <p>Il Dieci tira un rigore! Il pallone porta una vocale e impiega 30 secondi ad arrivare in porta.</p>
           </li>
           <li>
             <span class="glyph" aria-hidden="true">
@@ -360,7 +360,7 @@ kbd {
             <span class="glyph" aria-hidden="true">
               <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1" style="fill:none;stroke:var(--ink);stroke-width:2"/><path d="M3 9h18M3 13h18M8 5v14M13 5v14M18 5v14" style="stroke:var(--ink-dim);stroke-width:1"/><circle cx="16" cy="13" r="3" style="fill:var(--danger)"/></svg>
             </span>
-            <p>Gioca con calma e riprova: il Dieci ti aspetta. Nella sfida, invece, hai un tempo per parare. Una partita sono 10 tiri.</p>
+            <p>Durante il volo, scegli la vocale giusta per parare. Hai 30 secondi per ogni rigore. Se il pallone arriva in porta, è gol. Una partita sono 10 rigori.</p>
           </li>
         </ul>
         <fieldset class="speed">
@@ -428,7 +428,7 @@ kbd {
 
   const TAU = Math.PI * 2;
   const VOWELS = ['A', 'E', 'I', 'O', 'U'];
-  const RUN_TIME = 40; // secondi che il Dieci impiega per arrivare in porta
+  const RUN_TIME = 30; // durata del volo del rigore: il bambino può parare durante il tiro
   const SHOTS = 10;
   const PLAY_PHASES = ['kickoff', 'run', 'shot', 'saved', 'scored', 'next'];
   const DISPLAY = 'Teko, "Arial Narrow", Impact, sans-serif';
@@ -787,14 +787,14 @@ kbd {
     canvas.height = Math.round(H * dpr);
     geometry();
   }
-  // Il percorso del Dieci: da lontano verso la porta, a zig-zag come in uno slalom
-  function path(p) {
-    const e = 0.35 * p + 0.65 * p * p;
-    const s = lerp(0.24, 1, e);
+  // Il calciatore rimane sul dischetto; solo il pallone si avvicina alla porta.
+  function penaltySpot() { return { x: W / 2, y: H * 0.53, s: 0.48 }; }
+  function penaltyFlight(progress) {
+    const p = penaltySpot(), t = clamp(progress, 0, 1);
     return {
-      x: W / 2 + Math.sin(p * TAU * 2.2) * W * 0.2 * (1 - e * 0.55),
-      y: lerp(field.farY, field.nearY, e),
-      s,
+      x: lerp(p.x + field.sh * p.s * 0.12, W / 2 + (round ? round.dir : 1) * W * 0.26, t),
+      y: lerp(p.y - field.R0 * p.s, H - field.kh * 0.62, t) - Math.sin(Math.PI * t) * H * 0.12,
+      r: lerp(field.R0 * p.s, field.R0 * 2.2, t),
     };
   }
 
@@ -813,19 +813,14 @@ kbd {
     lastVowel = v;
     match.asked[v]++;
     match.shot++;
-    // tre difensori sul percorso: il Dieci li supera uno dopo l'altro
-    const defenders = [0.26, 0.5, 0.73].map((pd) => {
-      const p = path(pd);
-      const side = Math.sin(pd * TAU * 2.2) > 0 ? -1 : 1;
-      return { pd, x: p.x + side * W * 0.1 * p.s, y: p.y - 2, s: p.s, fellAt: -9 };
-    });
-    round = { v, defenders, reminders: 0, lastTick: RUN_TIME };
+    round = { v, dir: Math.random() < .5 ? -1 : 1, reminders: 0, lastTick: RUN_TIME };
     shot = null;
     keeper.diveAt = -9;
     keeper.holding = false;
     updateHud();
     setPhase('run');
-    speakSeq(['Arriva la vocale', v]);
+    sfx.kick();
+    speakSeq(['Rigore! Para la vocale', v]);
   }
   function choose(v) {
     ensureAudio();
@@ -848,10 +843,11 @@ kbd {
     shoot(correct, v);
   }
   function shoot(save, pressed) {
-    const p = path(clamp(phaseT / RUN_TIME, 0, 1));
-    const dir = Math.random() < 0.5 ? -1 : 1;
-    const R = field.R0 * p.s;
-    const bx = p.x + field.sh * p.s * 0.12, by = p.y - R;
+    const p = penaltySpot();
+    const ball = penaltyFlight(phaseT / RUN_TIME);
+    const dir = round.dir;
+    const R = ball.r;
+    const bx = ball.x, by = ball.y;
     // parata: il pallone finisce nei guanti; gol: va nell'angolo opposto al tuffo
     const gloveX = W / 2 + dir * W * 0.26, gloveY = H - field.kh * 0.62;
     shot = {
@@ -862,7 +858,6 @@ kbd {
     };
     keeper.dir = pressed === null ? 0 : dir;
     keeper.diveAt = pressed === null ? -9 : clock + 0.1;
-    sfx.kick();
     setPhase('shot');
   }
   function resolveShot() {
@@ -1049,17 +1044,11 @@ kbd {
         if (phaseT >= 1.4) startRound();
         break;
       case 'run': {
-        if (!Learning.settings.challenge) phaseT = Math.min(phaseT, 12);
-        const p = phaseT / RUN_TIME;
-        for (const d of round.defenders) {
-          if (d.fellAt < 0 && p >= d.pd) { d.fellAt = clock; sfx.whoosh(); }
-        }
-        // la voce ricorda la vocale a metà strada e quando il Dieci è vicino
-        if (round.reminders === 0 && phaseT >= 14) { round.reminders = 1; speakSeq(['Attenzione!', round.v]); }
-        if (round.reminders === 1 && phaseT >= 28) { round.reminders = 2; speakSeq(['Attenzione!', round.v]); }
+        if (round.reminders === 0 && phaseT >= 10) { round.reminders = 1; round.helped = true; speakSeq(['Para la vocale', round.v]); }
+        if (round.reminders === 1 && phaseT >= 20) { round.reminders = 2; round.helped = true; speakSeq(['Cerca la vocale', round.v]); }
         const left = Math.ceil(RUN_TIME - phaseT);
         if (left <= 5 && left < round.lastTick) { round.lastTick = left; sfx.tick(); }
-        if (phaseT >= RUN_TIME) shoot(false, null);
+        if (phaseT >= RUN_TIME) { Learning.record(round.v, 'recognition', false); shoot(false, null); resolveShot(); }
         break;
       }
       case 'shot':
@@ -1204,7 +1193,7 @@ kbd {
   // Il Dieci visto di fronte mentre corre verso la porta
   function drawStriker(x, y, s, kicking) {
     const u = (field.sh * s) / 10.4;
-    const run = phase === 'run' && !reduceMotion;
+    const run = false;
     const stride = run ? Math.sin(clock * 9) * 0.4 : 0;
     ctx.save();
     ctx.translate(x, y);
@@ -1283,30 +1272,6 @@ kbd {
     }
     ctx.restore();
   }
-  function drawDefender(d) {
-    const u = (field.sh * d.s) / 10.4;
-    const fall = d.fellAt > 0 ? easeOut(clamp((clock - d.fellAt) / 0.5, 0, 1)) : 0;
-    const side = d.x < W / 2 ? -1 : 1;
-    ctx.save();
-    ctx.translate(d.x, d.y);
-    ctx.rotate(side * fall * 1.35);
-    ctx.fillStyle = TEAM.shorts;
-    ctx.fillRect(-u * 1.1, -u * 4.4, u * 0.9, u * 4.3);
-    ctx.fillRect(u * 0.2, -u * 4.4, u * 0.9, u * 4.3);
-    ctx.fillStyle = TEAM.shirt;
-    rr(-u * 1.7, -u * 8.3, u * 3.4, u * 4.2, u * 0.6);
-    ctx.fill();
-    ctx.fillStyle = TEAM.skin;
-    ctx.beginPath();
-    ctx.arc(0, -u * 9.3, u * 1.0, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = TEAM.hair;
-    ctx.beginPath();
-    ctx.arc(0, -u * 9.7, u * 0.95, Math.PI, TAU);
-    ctx.fill();
-    ctx.restore();
-  }
-  // il portiere, visto di spalle, con i guanti pronti
   function drawKeeper() {
     const h = field.kh;
     const u = h / 10.4;
@@ -1459,30 +1424,21 @@ kbd {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawPitch();
     drawStands();
-    // il Dieci, i difensori e il pallone, ordinati per profondità
-    let sp = null;
-    if (phase === 'run') sp = path(clamp(phaseT / RUN_TIME, 0, 1));
-    else if (shot) sp = { x: shot.sx, y: shot.sy, s: shot.ss };
-    else sp = path(0);
+    const sp = penaltySpot();
     const showStriker = !['menu', 'final', 'summary'].includes(phase);
-    const actors = round && showStriker ? round.defenders.map((d) => ({ y: d.y, draw: () => drawDefender(d) })) : [];
     if (showStriker) {
-      actors.push({
-        y: sp.y,
-        draw: () => {
-          drawStriker(sp.x, sp.y, sp.s, phase === 'shot' && phaseT < 0.2);
-          if (phase === 'run' || phase === 'kickoff' || phase === 'next') {
-            const R = field.R0 * sp.s;
-            const label = round && phase === 'run' ? (level === 2 ? '?' : round.v) : '';
-            drawBall(label, sp.x + field.sh * sp.s * 0.12, sp.y - R, R, clock * 4);
-          }
-        },
-      });
+      drawStriker(sp.x, sp.y, sp.s, phase === 'run' && phaseT < .4);
+      if (phase === 'kickoff' || phase === 'next') {
+        drawBall('', sp.x + field.sh * sp.s * .12, sp.y - field.R0 * sp.s, field.R0 * sp.s);
+      }
     }
-    actors.sort((a, b) => a.y - b.y).forEach((a) => a.draw());
     drawTimer();
     drawPosts();
     drawKeeper();
+    if (phase === 'run' && round) {
+      const ball = penaltyFlight(phaseT / RUN_TIME);
+      drawBall(level === 2 ? '?' : round.v, ball.x, ball.y, ball.r, reduceMotion ? 0 : clock * 4);
+    }
     if (phase === 'shot') {
       const t = clamp(phaseT / 0.62, 0, 1);
       const e = easeIn(t * 0.6 + 0.4 * t);
@@ -1507,7 +1463,8 @@ kbd {
     }
     ctx.globalAlpha = 1;
     if (phase === 'run' && round) {
-      drawBubble(sp.x, sp.y - field.sh * sp.s * 1.08, sp.y, field.sh * sp.s * 0.22, level === 2 ? '?' : round.v);
+      const ball = penaltyFlight(phaseT / RUN_TIME);
+      drawBubble(ball.x, ball.y - ball.r * 2, ball.y - ball.r, ball.r, level === 2 ? '?' : round.v);
     }
     drawBanner();
   }

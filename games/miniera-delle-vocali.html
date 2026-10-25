@@ -360,7 +360,7 @@ kbd {
             <span class="glyph" aria-hidden="true">
               <svg viewBox="0 0 16 16"><rect x="7" y="4" width="2" height="11" style="fill:#9a6a3a"/><rect x="2" y="2" width="12" height="2" style="fill:#c9c9c9"/><rect x="1" y="3" width="2" height="2" style="fill:#c9c9c9"/><rect x="13" y="3" width="2" height="2" style="fill:#c9c9c9"/><rect x="6" y="1" width="4" height="2" style="fill:#8a8a8a"/></svg>
             </span>
-            <p>Tocca la vocale e segui la traccia per scriverla: Bit aggiunge un mattone! Puoi riprovare con calma. Le penalità si attivano solo nella sfida.</p>
+            <p>La lettera appare subito: ripassala con il dito o il mouse. Il gioco la controlla e Bit aggiunge un mattone automaticamente! Puoi riprovare con calma. Le penalità si attivano solo nella sfida.</p>
           </li>
           <li>
             <span class="glyph" aria-hidden="true">
@@ -1007,11 +1007,20 @@ kbd {
     setPhase('prompt');
     updateHint();
     promptVoice();
+    if (Learning.settings.writing) writeRound();
+  }
+  function writeRound() {
+    if (!round || Learning.busy()) return;
+    const current = round;
+    current.autoWrite = true;
+    Learning.write(current.v, () => {
+      if (round === current) { round.written = true; press(current.v); }
+    });
   }
   function promptVoice() {
     if (!round) return;
     const said = round.word ? [round.word.text.toLowerCase()] : [];
-    said.push('scava la vocale', round.v.toLowerCase());
+    said.push(Learning.settings.writing ? 'scrivi la vocale' : 'scava la vocale', round.v.toLowerCase());
     speakSeq(said);
   }
   function press(v) {
@@ -1021,11 +1030,10 @@ kbd {
     if (!Learning.active().includes(v)) return;
     const correct = v === round.v;
     if (correct && Learning.settings.writing && !round.written) {
-      const current = round;
-      Learning.write(v, () => { if (round === current) { round.written = true; press(v); } });
+      writeRound();
       return;
     }
-    Learning.record(round.v, 'recognition', correct, round.errors > 0 || round.helped, v);
+    if (!round.autoWrite) Learning.record(round.v, 'recognition', correct, round.errors > 0 || round.helped, v);
     swing = { correct, v, hit1: false, hit2: false };
     sfx.swing();
     if (correct) {

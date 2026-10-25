@@ -4,7 +4,7 @@
   const gamesBase = new URL('.', document.currentScript.src);
   const vowels = ['A', 'E', 'I', 'O', 'U'];
   const key = 'vocali-learning-v1';
-  const defaults = { vowels: ['A', 'E'], challenge: false, autonomous: false, neutral: false, effects: true, writing: true, lower: false };
+  const defaults = { vowels: ['A', 'E', 'I', 'O', 'U'], challenge: false, autonomous: false, neutral: false, effects: true, writing: true, lower: false };
   function read() { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
   let saved = read();
   const settings = { ...defaults, ...saved.settings };
@@ -72,45 +72,61 @@
     U: [[[70,60],[70,180], ...Array.from({length: 25}, (_, i) => { const a = Math.PI - i * Math.PI / 24; return [150 + 80 * Math.cos(a),180 + 65 * Math.sin(a)]; }), [230,60]]]
   };
   api.write = function(v, done = () => {}, cancelled = () => {}) {
-    const d = dialog('Scriviamo la ' + v); let stage = 0, stroke = [], strokes = [], drawing = false, retry = false, finished = false, anim = 0, token = 0;
-    const p = document.createElement('p'); d.append(p);
-    const c = document.createElement('canvas'); c.width = c.height = 300; c.setAttribute('aria-label', 'Spazio per scrivere la vocale ' + v); d.append(c); const ctx = c.getContext('2d');
-    const status = document.createElement('p'); status.setAttribute('role', 'status'); d.append(status);
+    const d = dialog('Scrivi la ' + v);
+    let stroke = [], strokes = [], pointer = null, finished = false;
+    const p = document.createElement('p'); p.textContent = 'Ripassa la lettera con il dito o il mouse. Quando è pronta, si va avanti da soli!'; d.append(p);
+    const c = document.createElement('canvas'); c.width = c.height = 300; c.setAttribute('aria-label', 'Ripassa la vocale ' + v); d.append(c);
+    const ctx = c.getContext('2d');
+    const status = document.createElement('p'); status.setAttribute('role', 'status'); status.textContent = 'Puoi cominciare subito.'; d.append(status);
     const row = document.createElement('div'); row.className = 'learn-row'; d.append(row);
-    function line(points, color, width) { if (!points.length) return; ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineJoin = ctx.lineCap = 'round'; points.forEach(([x,y],i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y)); ctx.stroke(); }
-    function draw() {
-      ctx.clearRect(0,0,300,300); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,300,300);
-      ctx.strokeStyle = '#dce4ee'; ctx.lineWidth = 1; [60,150,245].forEach(y => { ctx.beginPath(); ctx.moveTo(20,y); ctx.lineTo(280,y); ctx.stroke(); });
-      if (stage < 3) paths[v].forEach(points => line(points, stage === 2 ? '#d5dce6' : '#c0ccdc', stage === 2 ? 3 : 18));
-      else { ctx.fillStyle = '#64748b'; ctx.font = 'bold 38px Arial'; ctx.fillText(v,12,42); }
-      if (stage === 0) {
-        const flat = samples(); line(flat.slice(0,Math.floor(anim)), '#167a63', 9);
-      } else if (stage === 1) paths[v].forEach((pts,i) => { const [x,y] = pts[0]; ctx.fillStyle = '#156c59'; ctx.beginPath(); ctx.arc(x,y,11,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#fff'; ctx.font='bold 14px Arial'; ctx.fillText(String(i+1),x-4,y+5); const q=pts[1]; const angle=Math.atan2(q[1]-y,q[0]-x); const ax=x+Math.cos(angle)*30, ay=y+Math.sin(angle)*30; line([[ax-10*Math.cos(angle-.5),ay-10*Math.sin(angle-.5)],[ax,ay],[ax-10*Math.cos(angle+.5),ay-10*Math.sin(angle+.5)]], '#156c59',3); });
-      strokes.forEach(s => line(s,'#1256a0',9)); line(stroke,'#1256a0',9);
+    function line(points, color, width) {
+      if (!points.length) return;
+      ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineJoin = ctx.lineCap = 'round';
+      points.forEach(([x,y],i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y)); ctx.stroke();
     }
-    function samples() { const out=[]; paths[v].forEach(path => { path.slice(1).forEach((b,i) => { const a=path[i], n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/5)); for(let j=0;j<=n;j++) out.push([a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n]); }); }); return out; }
-    function animate() { const id=++token; anim=0; const total=samples().length; if (matchMedia('(prefers-reduced-motion: reduce)').matches) { anim=total; draw(); return; } const frame=()=> { if(id!==token || !d.open) return; anim+=2; draw(); if(anim<total) requestAnimationFrame(frame); }; requestAnimationFrame(frame); }
-    function update() { p.textContent = ['Guarda il movimento. Premi «Ora provo» quando sei pronto.', 'Segui la traccia. Parti dai punti numerati e segui le frecce.', 'Ripassa la traccia leggera.', 'Prova da solo. Il modello è piccolo, in alto.'][stage]; check.textContent=stage===0?'Ora provo':stage===3?'Ho finito':'Controlla e continua'; strokes=[]; stroke=[]; status.textContent=''; draw(); if(stage===0) animate(); }
-    const point=e=> { const r=c.getBoundingClientRect(); return [(e.clientX-r.left)*300/r.width,(e.clientY-r.top)*300/r.height]; };
-    c.onpointerdown=e=> { if(stage===0) return; e.preventDefault(); c.setPointerCapture(e.pointerId); drawing=true; stroke=[point(e)]; };
-    c.onpointermove=e=> { if(drawing) { stroke.push(point(e)); draw(); } };
-    c.onpointerup=e=> { if(!drawing) return; stroke.push(point(e)); strokes.push(stroke); stroke=[]; drawing=false; draw(); };
-    c.onpointercancel=()=> { drawing=false; stroke=[]; draw(); };
-    const check=button(row,'Ora provo',()=> {
-      if(stage===0) { token++; stage++; update(); return; }
-      const ink=strokes.flat(), guide=samples();
+    function draw() {
+      ctx.fillStyle = '#fff'; ctx.fillRect(0,0,300,300);
+      ctx.strokeStyle = '#e4eaf2'; ctx.lineWidth = 1;
+      [60,150,245].forEach(y => { ctx.beginPath(); ctx.moveTo(20,y); ctx.lineTo(280,y); ctx.stroke(); });
+      paths[v].forEach(points => line(points, '#c0ccdc', 20));
+      paths[v].forEach(points => { const [x,y] = points[0]; ctx.fillStyle = '#156c59'; ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill(); });
+      strokes.forEach(s => line(s,'#1256a0',10)); line(stroke,'#1256a0',10);
+    }
+    // Resample segments so a quick pen movement counts as a continuous line.
+    function samples(path) {
+      const out = path.length ? [path[0]] : [];
+      path.slice(1).forEach((b,i) => { const a=path[i], n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/5));
+        for(let j=1;j<=n;j++) out.push([a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n]);
+      }); return out;
+    }
+    const guides = paths[v].map(samples), guide = guides.flat();
+    function check() {
+      const ink=strokes.flatMap(samples);
       const close=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<25;
-      const coverage=guide.filter(a=>ink.some(b=>close(a,b))).length/guide.length;
+      const coverage=part=>part.filter(a=>ink.some(b=>close(a,b))).length/part.length;
       const accuracy=ink.length ? ink.filter(a=>guide.some(b=>close(a,b))).length/ink.length : 0;
-      if(coverage<.68 || accuracy<.60) { retry=true; status.textContent='Proviamo ancora insieme: segui tutta la lettera. Puoi cancellare e riprovare.'; return; }
-      if(stage<3) { stage++; update(); return; }
-      record(v,'writing',true,retry); finished=true; d.close(); done();
-    });
-    button(row,'Riprova',()=> { retry=true; strokes=[]; stroke=[]; draw(); status.textContent='Riparti quando vuoi.'; if(stage===0) animate(); });
-    button(row,'Rivedi il movimento',()=> { retry=true; stage=0; update(); });
+      // Every part must be traced: for example, an A needs its crossbar as well.
+      if (coverage(guide) >= .80 && guides.every(part=>coverage(part)>=.75) && accuracy>=.65) {
+        finished=true; record(v,'writing',true,true); d.close(); done();
+      } else {
+        status.textContent = accuracy < .65 && ink.length > 8 ? 'Segui la lettera grigia. Puoi cancellare e riprovare.' : 'Continua a ripassare la lettera.';
+      }
+    }
+    const point=e=> { const r=c.getBoundingClientRect(); return [(e.clientX-r.left)*300/r.width,(e.clientY-r.top)*300/r.height]; };
+    c.onpointerdown=e=> {
+      if (pointer !== null || finished) return;
+      e.preventDefault(); c.setPointerCapture(e.pointerId); pointer=e.pointerId; stroke=[point(e)]; draw();
+    };
+    c.onpointermove=e=> { if(pointer===e.pointerId) { e.preventDefault(); stroke.push(point(e)); draw(); } };
+    c.onpointerup=e=> {
+      if(pointer!==e.pointerId) return;
+      stroke.push(point(e)); strokes.push(stroke); stroke=[]; pointer=null; draw(); check();
+    };
+    c.onpointercancel=e=> { if(pointer===e.pointerId) { pointer=null; stroke=[]; draw(); } };
+    button(row,'Cancella',()=> { pointer=null; strokes=[]; stroke=[]; draw(); status.textContent='Puoi ricominciare subito.'; });
     button(row,'Chiudi',()=>d.close());
-    const paper=document.createElement('p'); paper.className='learn-note'; paper.textContent='Dopo il gioco, prova la stessa vocale su carta con un adulto. Il controllo del tratto è un aiuto, non una valutazione della scrittura.'; d.append(paper);
-    d.addEventListener('close',()=> { token++; if(!finished) cancelled(); }); d.showModal(); update();
+    d.addEventListener('close',()=> { if(!finished) cancelled(); });
+    d.showModal(); draw();
   };
   function mount() {
     document.body.classList.toggle('learn-neutral',settings.neutral);
@@ -140,7 +156,7 @@
     button(actions,'Ascolta e trova',()=> { location.href=new URL('gol-delle-vocali.html', gamesBase).href; });
     button(actions,'Leggi',reading);
     button(actions,'Scrivi',()=> { api.write(pick(),()=>speak('Bravo! Ora prova anche su carta.')); });
-    button(actions,'Come si gioca',()=> { const d=dialog('Proviamo insieme'); const p=document.createElement('p'); p.textContent='Ascolta la vocale, ripetila e cerca la stessa lettera. Nel gioco della lettura, di’ la lettera prima di ascoltarla. Nella Miniera segui il movimento per scriverla. Puoi riascoltare e riprovare.'; d.append(p); button(d,'Ascolta la spiegazione',()=>speak(p.textContent)); button(d,'Ho capito',()=>d.close()); d.showModal(); });
+    button(actions,'Come si gioca',()=> { const d=dialog('Proviamo insieme'); const p=document.createElement('p'); p.textContent='Ascolta la vocale, ripetila e cerca la stessa lettera. Nel gioco della lettura, di’ la lettera prima di ascoltarla. Nella Miniera ripassa la lettera: il gioco controlla il tratto e continua automaticamente. Puoi riascoltare e riprovare.'; d.append(p); button(d,'Ascolta la spiegazione',()=>speak(p.textContent)); button(d,'Ho capito',()=>d.close()); d.showModal(); });
     button(actions,'Progressi',()=> {
       const d=dialog('Progressi in questo browser'), wrapper=document.createElement('div'); wrapper.className='learn-panel learn-table';
       const table=document.createElement('table'); table.innerHTML='<thead><tr><th>Vocale</th><th>Trova: da solo / aiuto</th><th>Leggi: da solo / aiuto</th><th>Scrivi: percorsi completati</th><th>Confusioni</th></tr></thead>'; const body=document.createElement('tbody');
