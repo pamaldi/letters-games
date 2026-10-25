@@ -1,0 +1,21 @@
+.learn-panel { margin: 20px 0; padding: 18px; border: 1px solid #52617c; border-radius: 16px; background: #17243a; color: #f5f7ff; font: 16px/1.5 system-ui, sans-serif; text-align: left; }
+.learn-panel h2, .learn-dialog h2 { margin: 0 0 12px; font: bold 24px/1.2 system-ui, sans-serif; }
+.learn-panel label { display: inline-flex; align-items: center; gap: 8px; margin: 6px 12px 6px 0; }
+.learn-panel input { width: 22px; height: 22px; accent-color: #a9e5bb; }
+.learn-panel select, .learn-panel button, .learn-dialog button { padding: 12px 16px; min-height: 44px; border: 1px solid #71839f; border-radius: 10px; font: bold 16px system-ui, sans-serif; color: #10192f; background: #dbeaff; cursor: pointer; }
+.learn-panel button:focus-visible, .learn-dialog button:focus-visible { outline: 3px solid #ffd782; outline-offset: 3px; }
+.learn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+.learn-note { font-size: 14px; color: #d0daed; }
+.learn-table { overflow-x: auto; }
+.learn-panel table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.learn-panel th, .learn-panel td { padding: 8px; border-bottom: 1px solid #52617c; text-align: left; }
+.learn-dialog { width: min(620px, calc(100% - 24px)); max-height: 94dvh; overflow: auto; padding: 20px; border: 2px solid #71839f; border-radius: 20px; background: #17243a; color: #f5f7ff; font: 17px/1.5 system-ui, sans-serif; }
+.learn-dialog::backdrop { background: #071020e8; }
+.learn-dialog canvas { position: static !important; display: block; width: 100% !important; height: auto !important; aspect-ratio: 1; border-radius: 14px; background: #fff; touch-action: none; }
+.learn-dialog .read-letter { text-align: center; font: bold 140px/1.3 Arial, sans-serif; color: #fff; }
+.learn-dialog p { margin: 10px 0; }
+body.learn-neutral .slot, body.learn-neutral .pad button { color: #fff !important; border-color: #a9d7ff !important; }
+[data-v][hidden] { display: none !important; }
+.learn-settings { margin: 14px 0; }
+.learn-settings summary { cursor: pointer; padding: 12px; border: 1px solid #71839f; border-radius: 10px; color: #f5f7ff; background: #17243a; font: bold 16px system-ui, sans-serif; }
+@media (max-width: 480px) { .learn-dialog { padding: 12px; } .learn-panel { padding: 12px; } }
