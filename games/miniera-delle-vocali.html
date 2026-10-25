@@ -1,0 +1,1923 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Miniera delle Vocali</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Silkscreen:wght@400;700&display=swap">
+<style>
+/* Layout: one-screen blocky world — dark-earth HUD strip, a pixel-art stage with the miner on the left and the build site on the right, a 5-slot ore hotbar below */
+:root {
+  color-scheme: dark;
+  --bg: #15120d;
+  --panel: #2a2319;
+  --panel-hi: #3a3123;
+  --edge: #0b0907;
+  --card: rgba(26, 21, 15, 0.94);
+  --dim: rgba(11, 9, 7, 0.45);
+  --ink: #f5ecd8;
+  --ink-dim: #c4b392;
+  --grass: #67b33a;
+  --grass-dark: #3f7a22;
+  --gold: #f2c230;
+  --danger: #e2483d;
+  --v-a: #ff6b5b;
+  --v-e: #ffc53d;
+  --v-i: #41dcab;
+  --v-o: #56c3ff;
+  --v-u: #cf95ff;
+  --vi-a: #c9402f;
+  --vi-e: #a87400;
+  --vi-i: #0f8f68;
+  --vi-o: #1a7fc4;
+  --vi-u: #8a4fcc;
+  --font-display: "Silkscreen", "Courier New", monospace;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+}
+[hidden] { display: none !important; }
+html { height: 100%; box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+}
+button { font: inherit; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+.app {
+  height: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-block: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- HUD ---------- */
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+}
+.brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+.stats { display: flex; gap: 18px; margin: 0; }
+.stats div { display: flex; flex-direction: column; gap: 2px; min-width: 3.4rem; }
+.stats dt {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+.stats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.tools { display: flex; gap: 8px; }
+.tool {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 0 0 3px var(--edge), inset 0 -3px 0 rgba(0, 0, 0, 0.35), inset 0 3px 0 rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.tool:hover:not(:disabled) { background: var(--panel-hi); }
+.tool:disabled { opacity: 0.4; cursor: default; }
+.tool svg { width: 20px; height: 20px; }
+
+/* ---------- stage ---------- */
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 300px;
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: 0 0 0 3px var(--edge);
+}
+canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: manipulation;
+  image-rendering: pixelated;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  overflow: auto;
+  padding: 16px;
+}
+.overlay.dimmed { background: var(--dim); }
+.card {
+  margin: auto;
+  width: 100%;
+  max-width: 30rem;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 22px 18px;
+  background: var(--card);
+  box-shadow: 0 0 0 3px var(--edge), inset 0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+#ov-menu .card { margin: auto 0; margin-inline-start: clamp(0px, 5%, 56px); }
+#ov-summary .card { margin: 0 auto auto; }
+.card h2 { margin: 0; text-wrap: balance; }
+.card p { margin: 0; }
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 4.6vw, 2.5rem);
+  line-height: 1.05;
+}
+.title b { font-weight: 700; color: var(--c); }
+
+.how { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.how li { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: center; }
+.how p { max-width: 46ch; }
+.glyph { width: 36px; height: 36px; display: grid; place-items: center; }
+.glyph svg { width: 32px; height: 32px; shape-rendering: crispEdges; }
+
+.speed { border: 0; margin: 0; padding: 0; min-width: 0; }
+.speed legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+.seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 4px;
+  background: var(--edge);
+}
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label {
+  padding: 9px 6px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--ink-dim);
+  background: var(--panel);
+  cursor: pointer;
+}
+.seg label:hover { color: var(--ink); }
+.seg input:checked + label { background: var(--grass); color: var(--edge); }
+.seg input:focus-visible + label { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+.voice-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.voice-row .fine { flex: 1 1 12rem; min-width: 0; }
+
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.btn {
+  padding: 12px 20px;
+  border: 0;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.06s;
+}
+.btn.small { padding: 7px 12px; font-size: 0.85rem; }
+.btn.primary {
+  background: var(--grass);
+  color: var(--edge);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  box-shadow: 0 0 0 3px var(--edge), inset 0 -5px 0 var(--grass-dark), inset 0 4px 0 rgba(255, 255, 255, 0.25);
+}
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.primary:active { transform: translateY(2px); }
+.btn.ghost {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 0 0 3px var(--edge), inset 0 -3px 0 rgba(0, 0, 0, 0.35);
+}
+.btn.ghost:hover { background: var(--panel-hi); }
+.hint, .fine { color: var(--ink-dim); font-size: 0.84rem; }
+kbd {
+  font-family: var(--font-body);
+  font-size: 0.8em;
+  padding: 1px 6px;
+  background: var(--panel-hi);
+  color: var(--ink);
+  box-shadow: 0 2px 0 var(--edge);
+}
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+.card h2.plain { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; line-height: 1.15; }
+
+.tally { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.tally li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2px;
+  background: var(--panel);
+  box-shadow: 0 0 0 2px var(--edge);
+  min-width: 0;
+}
+.tally b { font-weight: 700; font-size: 1.4rem; color: var(--c); }
+.tally span { font-family: var(--font-display); font-size: 0.8rem; color: var(--ink-dim); }
+
+/* ---------- barra delle vocali ---------- */
+.hotbar {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  background: var(--panel);
+  box-shadow: 0 0 0 3px var(--edge);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.slot {
+  position: relative;
+  width: clamp(54px, 16vw, 78px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background-color: var(--panel-hi);
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.45), inset 0 0 0 6px rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.slot span {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 6vw, 2.4rem);
+  line-height: 1;
+  color: var(--ink);
+  text-shadow: 3px 3px 0 var(--edge), -2px 2px 0 var(--edge), 2px -2px 0 var(--edge), -2px -2px 0 var(--edge);
+}
+.slot:hover { box-shadow: inset 0 0 0 3px var(--ink-dim), inset 0 0 0 6px rgba(255, 255, 255, 0.1); }
+.slot.ok { box-shadow: 0 0 0 3px var(--ink), inset 0 0 0 3px rgba(0, 0, 0, 0.45); transform: translateY(2px); }
+.slot.bad { box-shadow: 0 0 0 3px var(--danger), inset 0 0 0 3px rgba(0, 0, 0, 0.45); animation: nudge 0.25s; }
+.slot.hint { animation: glow 0.8s steps(2) infinite; }
+@keyframes nudge { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+@keyframes glow { 50% { box-shadow: 0 0 0 4px var(--gold), inset 0 0 0 3px rgba(0, 0, 0, 0.45); } }
+
+@media (max-width: 560px) {
+  .brand { display: none; }
+  .stats { gap: 12px; }
+  .stats div { min-width: 0; }
+  .card { padding: 18px 16px 16px; gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn { transition: none; }
+  .slot.bad, .slot.hint { animation: none; }
+}
+</style>
+
+<div class="app">
+  <header class="hud">
+    <h1 class="brand">Miniera delle Vocali</h1>
+    <dl class="stats">
+      <div><dt id="hud-plan">Casa</dt><dd id="hud-count">0/20</dd></div>
+      <div><dt>Villaggio</dt><dd id="hud-village">0</dd></div>
+    </dl>
+    <div class="tools">
+      <button class="tool" id="btn-repeat" type="button" aria-label="Ripeti la voce" title="Ripeti (Invio)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.6 6a8.6 8.6 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>
+      </button>
+      <button class="tool" id="btn-sound" type="button" aria-pressed="true" aria-label="Disattiva audio" title="Audio acceso">
+        <svg id="ic-sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>
+        <svg id="ic-sound-off" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>
+      </button>
+      <button class="tool" id="btn-pause" type="button" aria-label="Pausa" title="Pausa (Spazio)" disabled>
+        <svg id="ic-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>
+        <svg id="ic-play" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <canvas id="game" aria-label="Un mondo a blocchi: il minatore Bit scava le vocali e costruisce case, torri, ponti e castelli"></canvas>
+
+    <section class="overlay" id="ov-menu" aria-labelledby="menu-title">
+      <div class="card">
+        <h2 class="title" id="menu-title" aria-label="Miniera delle Vocali">M<b style="--c:var(--v-i)">I</b>N<b style="--c:var(--v-i)">I</b><b style="--c:var(--v-e)">E</b>R<b style="--c:var(--v-a)">A</b> D<b style="--c:var(--v-e)">E</b>LL<b style="--c:var(--v-e)">E</b> V<b style="--c:var(--v-o)">O</b>C<b style="--c:var(--v-a)">A</b>L<b style="--c:var(--v-i)">I</b></h2>
+        <ul class="how">
+          <li>
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 16 16"><rect x="2" y="6" width="3" height="4" style="fill:var(--ink)"/><path d="M5 6h1V5h1V4h1v8H7v-1H6v-1H5z" style="fill:var(--ink)"/><rect x="10" y="6" width="1" height="4" style="fill:var(--gold)"/><rect x="12" y="4" width="1" height="8" style="fill:var(--gold)"/></svg>
+            </span>
+            <p>Ascolta la voce: ti dice quale vocale scavare.</p>
+          </li>
+          <li>
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 16 16"><rect x="7" y="4" width="2" height="11" style="fill:#9a6a3a"/><rect x="2" y="2" width="12" height="2" style="fill:#c9c9c9"/><rect x="1" y="3" width="2" height="2" style="fill:#c9c9c9"/><rect x="13" y="3" width="2" height="2" style="fill:#c9c9c9"/><rect x="6" y="1" width="4" height="2" style="fill:#8a8a8a"/></svg>
+            </span>
+            <p>Premi quella vocale nella barra in basso. Se è giusta, il minatore Bit rompe il blocco. Se sbagli, un mattone cade giù!</p>
+          </li>
+          <li>
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 16 16"><rect x="4" y="3" width="8" height="2" style="fill:var(--v-a)"/><rect x="2" y="5" width="12" height="2" style="fill:var(--v-e)"/><rect x="3" y="7" width="10" height="7" style="fill:var(--v-i)"/><rect x="7" y="10" width="2" height="4" style="fill:#7a4f26"/><rect x="4" y="9" width="2" height="2" style="fill:var(--v-o)"/><rect x="10" y="9" width="2" height="2" style="fill:var(--v-o)"/></svg>
+            </span>
+            <p>Ogni vocale giusta diventa un mattone. Costruisci la casa col camino, poi la torre, il ponte sul fiume, il castello, il faro e il mulino a vento.</p>
+          </li>
+        </ul>
+        <fieldset class="speed">
+          <legend>Livello</legend>
+          <div class="seg">
+            <input type="radio" name="level" id="l-1" value="1" checked><label for="l-1">Solo vocali</label>
+            <input type="radio" name="level" id="l-2" value="2"><label for="l-2">Con le parole</label>
+          </div>
+        </fieldset>
+        <div class="voice-row">
+          <p class="fine" id="voice-name">Cerco una voce italiana…</p>
+          <button class="btn ghost small" id="btn-voice" type="button">Prova la voce</button>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btn-start" type="button">Gioca</button>
+          <span class="hint">oppure premi <kbd>Invio</kbd></span>
+        </div>
+        <p class="fine" id="menu-note" hidden></p>
+        <p class="fine">Al computer puoi usare anche i tasti <kbd>A</kbd> <kbd>E</kbd> <kbd>I</kbd> <kbd>O</kbd> <kbd>U</kbd> (valgono à è é ì ò ù). <kbd>Spazio</kbd> mette in pausa, <kbd>Invio</kbd> fa risentire la voce.</p>
+      </div>
+    </section>
+
+    <section class="overlay dimmed" id="ov-pause" aria-labelledby="pause-title" hidden>
+      <div class="card">
+        <p class="eyebrow">Pausa</p>
+        <h2 class="plain" id="pause-title">Bit si riposa</h2>
+        <p>Il cantiere aspetta finché non riparti.</p>
+        <div class="actions">
+          <button class="btn primary" id="btn-resume" type="button">Riprendi</button>
+          <button class="btn ghost" id="btn-quit" type="button">Menu</button>
+        </div>
+        <p class="hint">Premi <kbd>Spazio</kbd> per riprendere.</p>
+      </div>
+    </section>
+
+    <section class="overlay" id="ov-summary" aria-labelledby="sum-title" hidden>
+      <div class="card">
+        <p class="eyebrow" id="sum-eyebrow">Costruzione finita</p>
+        <h2 class="plain" id="sum-title">La casetta è finita!</h2>
+        <p id="sum-text"></p>
+        <ul class="tally" id="sum-tally" aria-label="Vocali scavate"></ul>
+        <p id="sum-tip"></p>
+        <p class="fine" id="sum-village"></p>
+        <div class="actions">
+          <button class="btn primary" id="btn-next" type="button">Costruisci la torre</button>
+          <button class="btn ghost" id="btn-menu" type="button">Menu</button>
+        </div>
+        <p class="hint"><kbd>Invio</kbd> per continuare</p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="hotbar" aria-label="Le vocali da scavare">
+    <button class="slot" type="button" tabindex="-1" data-v="A" aria-label="Scava la A"><span>A</span></button>
+    <button class="slot" type="button" tabindex="-1" data-v="E" aria-label="Scava la E"><span>E</span></button>
+    <button class="slot" type="button" tabindex="-1" data-v="I" aria-label="Scava la I"><span>I</span></button>
+    <button class="slot" type="button" tabindex="-1" data-v="O" aria-label="Scava la O"><span>O</span></button>
+    <button class="slot" type="button" tabindex="-1" data-v="U" aria-label="Scava la U"><span>U</span></button>
+  </nav>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const TAU = Math.PI * 2;
+  const VOWELS = ['A', 'E', 'I', 'O', 'U'];
+  const NOTES = { A: 523.25, E: 587.33, I: 659.25, O: 783.99, U: 880 };
+  // Parole facili da disegnare e senza dittonghi, così ogni vocale si sente da sola
+  const WORDS = [
+    ['LUNA', '🌙'], ['SOLE', '☀️'], ['CASA', '🏠'], ['MELA', '🍎'], ['PERA', '🍐'], ['UVA', '🍇'],
+    ['APE', '🐝'], ['CANE', '🐶'], ['GATTO', '🐱'], ['TOPO', '🐭'], ['RANA', '🐸'], ['LUPO', '🐺'],
+    ['NAVE', '🚢'], ['ROSA', '🌹'], ['PANE', '🍞'], ['NASO', '👃'], ['DADO', '🎲'], ['MARE', '🌊'],
+    ['MANO', '✋'], ['ORSO', '🐻'], ['TRENO', '🚂'], ['LIBRO', '📖'], ['MUCCA', '🐮'], ['PIZZA', '🍕'],
+    ['TORTA', '🎂'], ['PALLA', '⚽'], ['RAZZO', '🚀'], ['FUNGO', '🍄'], ['BICI', '🚲'], ['PESCE', '🐟'],
+    ['STELLA', '⭐'],
+  ];
+  // Le costruzioni, dalla riga più alta alla più bassa.
+  // Mattoni con la vocale: # muro, R tegola del tetto.
+  // Decorazioni: W finestra, D porta, G cancello, F bandiera, S fumo, L lanterna, M pale del mulino, ~ acqua.
+  const PLANS = [
+    { id: 'casetta', title: 'Casa', name: 'la casa', done: 'La casa è finita!', rows: [
+      '.....S.',
+      '...R.#.',
+      '..RRR#.',
+      '.RRRRR.',
+      '#W###W#',
+      '##WDW##',
+      '###D###'] },
+    { id: 'torre', title: 'Torre', name: 'la torre', done: 'La torre è finita!', rows: [
+      '..F..',
+      '#.#.#',
+      '#####',
+      '.#W#.',
+      '.###.',
+      '.#W#.',
+      '.###.',
+      '.#D#.'] },
+    { id: 'ponte', title: 'Ponte', name: 'il ponte', done: 'Il ponte è finito!', rows: [
+      'L.....L',
+      '#.....#',
+      '#######',
+      '##~~~##',
+      '~#~~~#~'] },
+    { id: 'castello', title: 'Castello', name: 'il castello', done: 'Il castello è finito!', rows: [
+      'F.....F',
+      '##...##',
+      'W#.F.#W',
+      '##.#.##',
+      '#######',
+      '##WGW##',
+      '###G###'] },
+    { id: 'faro', title: 'Faro', name: 'il faro', done: 'Il faro è finito!', rows: [
+      '...L...',
+      '..###..',
+      '.#####.',
+      '..#W#..',
+      '..###..',
+      '..#W#..',
+      '..###..',
+      '~~#D#~~'] },
+    { id: 'mulino', title: 'Mulino', name: 'il mulino a vento', done: 'Il mulino è finito!', rows: [
+      '.###.',
+      '.#M#.',
+      '.###.',
+      '.#W#.',
+      '#####',
+      '##D##'] },
+  ];
+  PLANS.forEach((p) => {
+    const h = p.rows.length;
+    const cells = [];
+    p.rows.forEach((row, i) => {
+      [...row].forEach((ch, c) => { if (ch !== '.') cells.push({ c, r: h - 1 - i, kind: ch }); });
+    });
+    p.w = Math.max(...p.rows.map((r) => r.length));
+    p.h = h;
+    p.cells = cells;
+    p.blocks = cells.filter((x) => x.kind === '#' || x.kind === 'R').sort((a, b) => a.r - b.r || a.c - b.c);
+  });
+  const PLAY_PHASES = ['dawn', 'prompt', 'swing', 'fly', 'settle', 'done'];
+  const DISPLAY = 'Silkscreen, "Courier New", monospace';
+  const BODY = '"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif';
+  const EMOJI = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+  const STORE_KEY = 'miniera-delle-vocali';
+  const reduceMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  // Tavolozza del mondo a blocchi (il disegno ha un solo aspetto, di giorno e di notte)
+  const SKY_DAY = ['#5aa7f0', '#69b1f3', '#79bbf5', '#8bc5f7', '#9fcff8', '#b5dafa'];
+  const SKY_NIGHT = ['#0a0f2c', '#0e1435', '#12193e', '#171f48', '#1c2551', '#222c5a'];
+  const DIRT = ['#8b5a2b', '#7a4d24', '#9a6634', '#6d4320'];
+  const GREEN = ['#5fae35', '#4f9a2a', '#6fbf3e', '#58a531'];
+  const STONE = ['#8a8a8a', '#7e7e7e', '#979797', '#848484'];
+  const WOOD = ['#a0703c', '#94673a', '#ab7a44'];
+  const MINER = {
+    helmet: '#f2c230', helmetDark: '#c4951b', lamp: '#fff6c2', skin: '#e2a97c', skinDark: '#c78b5e',
+    eye: '#2b2118', shirt: '#d2553b', shirtDark: '#a8402c', overall: '#7a5230', overallDark: '#5e3e24',
+    boots: '#2f2a26', wood: '#9a6a3a', iron: '#c9c9c9', ironDark: '#8a8a8a',
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const stage = $('stage');
+  const canvas = $('game');
+  const ctx = canvas.getContext('2d');
+  const css = getComputedStyle(document.documentElement);
+  const tok = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+  const COLOR = {
+    A: tok('--v-a', '#ff6b5b'), E: tok('--v-e', '#ffc53d'), I: tok('--v-i', '#41dcab'),
+    O: tok('--v-o', '#56c3ff'), U: tok('--v-u', '#cf95ff'),
+  };
+  const INK = {
+    A: tok('--vi-a', '#c9402f'), E: tok('--vi-e', '#a87400'), I: tok('--vi-i', '#0f8f68'),
+    O: tok('--vi-o', '#1a7fc4'), U: tok('--vi-u', '#8a4fcc'),
+  };
+  const C = { edge: tok('--edge', '#0b0907'), ink: tok('--ink', '#f5ecd8'), gold: tok('--gold', '#f2c230') };
+
+  const overlays = { menu: $('ov-menu'), pause: $('ov-pause'), summary: $('ov-summary') };
+  const btnPause = $('btn-pause');
+  const btnSound = $('btn-sound');
+  const slotEls = {};
+  document.querySelectorAll('.slot').forEach((el) => { slotEls[el.dataset.v] = el; });
+
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+  const easeIn = (t) => t * t * t;
+  const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const easeOutBack = (t) => 1 + 2.6 * Math.pow(t - 1, 3) + 1.6 * Math.pow(t - 1, 2);
+  function hexRgb(hex) {
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+    const n = parseInt(h, 16) || 0;
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function rgba(hex, a) {
+    const [r, g, b] = hexRgb(hex);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  function mix(a, b, t) {
+    const x = hexRgb(a), y = hexRgb(b);
+    return `rgb(${Math.round(lerp(x[0], y[0], t))},${Math.round(lerp(x[1], y[1], t))},${Math.round(lerp(x[2], y[2], t))})`;
+  }
+  function shade(hex, f) {
+    let [r, g, b] = hexRgb(hex);
+    if (f < 0) { r *= 1 + f; g *= 1 + f; b *= 1 + f; } else { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; }
+    return `rgb(${r | 0},${g | 0},${b | 0})`;
+  }
+  function rng(seed) {
+    let s = seed >>> 0;
+    return () => {
+      s = (s + 0x6D2B79F5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ---------- trame dei blocchi, disegnate pixel per pixel ----------
+  function tex(seed, draw) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 16;
+    draw(c.getContext('2d'), rng(seed));
+    return c;
+  }
+  function noiseFill(g, r, cols) {
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        g.fillStyle = cols[(r() * cols.length) | 0];
+        g.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+  const TEX = { ore: {}, brick: {}, roof: {} };
+  TEX.dirt = tex(11, (g, r) => noiseFill(g, r, DIRT));
+  TEX.grass = tex(12, (g, r) => {
+    noiseFill(g, r, DIRT);
+    for (let x = 0; x < 16; x++) {
+      const h = 3 + (r() < 0.45 ? 1 : 0) + (r() < 0.15 ? 1 : 0);
+      for (let y = 0; y < h; y++) { g.fillStyle = GREEN[(r() * 4) | 0]; g.fillRect(x, y, 1, 1); }
+    }
+  });
+  TEX.stone = tex(13, (g, r) => {
+    noiseFill(g, r, STONE);
+    g.fillStyle = '#6a6a6a';
+    for (let k = 0; k < 14; k++) g.fillRect((r() * 16) | 0, (r() * 16) | 0, r() < 0.3 ? 2 : 1, 1);
+  });
+  TEX.door = tex(15, (g, r) => {
+    noiseFill(g, r, WOOD);
+    g.fillStyle = '#5e3e1e';
+    g.fillRect(0, 0, 16, 1); g.fillRect(0, 15, 16, 1); g.fillRect(0, 0, 1, 16); g.fillRect(15, 0, 1, 16);
+    g.fillRect(1, 7, 14, 1); g.fillRect(7, 1, 1, 14);
+    g.fillStyle = '#d9c27a';
+    g.fillRect(12, 8, 2, 2);
+  });
+  TEX.glass = tex(16, (g) => {
+    g.fillStyle = '#a9dcf5';
+    g.fillRect(0, 0, 16, 16);
+    g.fillStyle = '#e6f6ff';
+    g.fillRect(0, 0, 16, 1); g.fillRect(0, 15, 16, 1); g.fillRect(0, 0, 1, 16); g.fillRect(15, 0, 1, 16);
+    g.fillRect(3, 3, 1, 1); g.fillRect(4, 4, 1, 1); g.fillRect(5, 5, 1, 1); g.fillRect(10, 3, 1, 1); g.fillRect(11, 4, 1, 1);
+  });
+  VOWELS.forEach((v, i) => {
+    const base = COLOR[v];
+    TEX.roof[v] = tex(40 + i, (g, r) => {
+      g.fillStyle = shade(base, -0.5);
+      g.fillRect(0, 0, 16, 16);
+      for (let row = 0; row < 4; row++) {
+        const off = row % 2 ? 2 : 0;
+        for (let x = off - 4; x < 16; x += 4) {
+          g.fillStyle = shade(base, -0.15 + (r() - 0.5) * 0.3);
+          g.fillRect(x, row * 4, 3, 3);
+          g.fillStyle = shade(base, 0.25);
+          g.fillRect(x, row * 4, 3, 1);
+        }
+      }
+    });
+    TEX.ore[v] = tex(20 + i, (g, r) => {
+      noiseFill(g, r, STONE);
+      for (let k = 0; k < 5; k++) {
+        const cx = 1 + ((r() * 12) | 0), cy = 1 + ((r() * 12) | 0);
+        for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1], [2, 1], [1, 2]]) {
+          if (r() < 0.8) { g.fillStyle = shade(base, (r() - 0.5) * 0.5); g.fillRect(cx + dx, cy + dy, 1, 1); }
+        }
+        g.fillStyle = shade(base, 0.55);
+        g.fillRect(cx, cy, 1, 1);
+      }
+    });
+    TEX.brick[v] = tex(30 + i, (g, r) => {
+      g.fillStyle = '#d9d1bf';
+      g.fillRect(0, 0, 16, 16);
+      for (let row = 0; row < 4; row++) {
+        const off = row % 2 ? 4 : 0;
+        for (let bx = -8; bx < 16; bx += 8) {
+          const x0 = Math.max(0, bx + off + 1), x1 = Math.min(16, bx + off + 8);
+          if (x1 <= x0) continue;
+          g.fillStyle = shade(base, (r() - 0.65) * 0.45);
+          g.fillRect(x0, row * 4 + 1, x1 - x0, 3);
+          g.fillStyle = shade(base, 0.3);
+          g.fillRect(x0, row * 4 + 1, 1, 1);
+        }
+      }
+    });
+  });
+
+  // ---------- dati salvati sul dispositivo ----------
+  function loadData() {
+    const base = { level: 1, muted: false, plan: 0, placed: [], built: [] };
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        return {
+          ...base, ...d,
+          placed: Array.isArray(d.placed) ? d.placed.filter((v) => VOWELS.includes(v)) : [],
+          built: Array.isArray(d.built) ? d.built.filter((id) => PLANS.some((p) => p.id === id)) : [],
+          plan: Number.isInteger(d.plan) && d.plan >= 0 ? d.plan : 0,
+        };
+      }
+    } catch (e) { /* storage non disponibile */ }
+    return base;
+  }
+  let data = loadData();
+  function saveData() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { /* ignora */ }
+  }
+
+  // ---------- audio ----------
+  let actx = null;
+  let master = null;
+  let voiceOut = null;
+  let muted = false;
+  function ensureAudio() {
+    if (!actx) {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        actx = new AC();
+        master = actx.createGain();
+        master.gain.value = 0.55;
+        master.connect(actx.destination);
+        voiceOut = actx.createGain();
+        voiceOut.gain.value = 1;
+        voiceOut.connect(actx.destination);
+        loadClips();
+      } catch (e) { actx = null; return; }
+    }
+    if (actx.state === 'suspended') actx.resume().catch(() => {});
+  }
+  function tone(freq, { type = 'sine', dur = 0.15, vol = 0.25, slide = 0, delay = 0 } = {}) {
+    if (!actx || muted) return;
+    const t0 = actx.currentTime + delay;
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g);
+    g.connect(master);
+    o.start(t0);
+    o.stop(t0 + dur + 0.03);
+  }
+  function crackle(dur, freq, vol) {
+    if (!actx || muted) return;
+    const len = Math.floor(actx.sampleRate * dur);
+    const buf = actx.createBuffer(1, len, actx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = actx.createBufferSource();
+    src.buffer = buf;
+    const f = actx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = freq;
+    f.Q.value = 0.8;
+    const g = actx.createGain();
+    g.gain.value = vol;
+    src.connect(f);
+    f.connect(g);
+    g.connect(master);
+    src.start();
+  }
+  const sfx = {
+    swing() { tone(520, { dur: 0.08, vol: 0.04, slide: 260 }); },
+    tok() { tone(190, { type: 'square', dur: 0.06, vol: 0.1, slide: 120 }); crackle(0.06, 1800, 0.25); },
+    crunch() { crackle(0.25, 1100, 0.5); tone(140, { type: 'square', dur: 0.1, vol: 0.08, slide: 70 }); },
+    tonc() { tone(170, { dur: 0.22, vol: 0.22, slide: 110 }); },
+    fall() { tone(900, { type: 'square', dur: 0.45, vol: 0.05, slide: 200 }); },
+    place(v) { tone(NOTES[v], { type: 'triangle', dur: 0.2, vol: 0.14 }); tone(220, { type: 'square', dur: 0.05, vol: 0.05 }); },
+    fanfare() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, { type: 'square', dur: 0.14, vol: 0.07, delay: i * 0.1 })); },
+  };
+
+  // ---------- voce ----------
+  // Bit parla solo con una voce italiana: una voce straniera leggerebbe male vocali e parole.
+  const synth = window.speechSynthesis || null;
+  const SPOKEN = { A: 'à!', E: 'é!', I: 'ì!', O: 'ò!', U: 'ù!' };
+  let voice = null;
+  let voiceSearchDone = !synth;
+  let speechUnlocked = false;
+  function voiceScore(v) {
+    if (!/^it([-_]|$)/i.test(v.lang || '')) return -1;
+    let s = 1;
+    if (/natural|neural|premium|enhanced|online|google/i.test(v.name)) s += 3;
+    if (/^it[-_]it$/i.test(v.lang)) s += 1;
+    return s;
+  }
+  function pickVoice() {
+    if (!synth) return;
+    try {
+      let best = null, bestScore = -1;
+      for (const v of synth.getVoices()) {
+        const s = voiceScore(v);
+        if (s > bestScore) { best = v; bestScore = s; }
+      }
+      voice = best;
+    } catch (e) { voice = null; }
+    showVoiceInfo();
+  }
+  function showVoiceInfo() {
+    const el = $('voice-name');
+    if (voice) el.textContent = `Voce: ${voice.name.replace(/^Microsoft\s+/i, '').replace(/\s+-\s+.*$/, '')}`;
+    else if (!voiceSearchDone) el.textContent = 'Cerco una voce italiana…';
+    else el.textContent = 'Nessuna voce italiana su questo dispositivo: la voce non potrà dire le vocali.';
+  }
+  function findVoices() {
+    if (!synth) { showVoiceInfo(); return; }
+    pickVoice();
+    try {
+      synth.addEventListener('voiceschanged', () => { voiceSearchDone = true; pickVoice(); });
+    } catch (e) { /* ignora */ }
+    // alcuni browser (Safari) non segnalano quando le voci sono pronte
+    let tries = 0;
+    const poll = setInterval(() => {
+      tries++;
+      pickVoice();
+      if (voice || tries >= 12) {
+        voiceSearchDone = true;
+        showVoiceInfo();
+        clearInterval(poll);
+      }
+    }, 250);
+  }
+  function unlockSpeech() {
+    // iPhone e iPad fanno parlare la pagina solo dopo un primo messaggio partito da un tocco
+    if (speechUnlocked || !synth) return;
+    speechUnlocked = true;
+    try {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      synth.speak(u);
+    } catch (e) { /* ignora */ }
+  }
+  // Vocali registrate una per una con una voce italiana, lente e scandite: suonano uguali su ogni dispositivo
+  const VOWEL_CLIPS = {/*CLIPS*/};
+  const clipBuffers = {};
+  let clipsLoading = false;
+  let clipSource = null;
+  let voiceRun = 0;
+  let voiceChain = Promise.resolve();
+  function loadClips() {
+    if (clipsLoading || !actx) return;
+    clipsLoading = true;
+    for (const [v, url] of Object.entries(VOWEL_CLIPS)) {
+      try {
+        const bin = atob(url.split(',')[1]);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        actx.decodeAudioData(bytes.buffer).then((buf) => { clipBuffers[v] = buf; }).catch(() => {});
+      } catch (e) { /* resta la voce del dispositivo */ }
+    }
+  }
+  function playClip(v) {
+    return new Promise((resolve) => {
+      const buf = clipBuffers[v];
+      if (!actx || !buf) { resolve(); return; }
+      const src = actx.createBufferSource();
+      src.buffer = buf;
+      src.connect(voiceOut);
+      src.onended = () => { if (clipSource === src) clipSource = null; resolve(); };
+      clipSource = src;
+      src.start();
+    });
+  }
+  function sayText(text, rate) {
+    return new Promise((resolve) => {
+      if (!synth || !voice) { resolve(); return; }
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.voice = voice;
+        u.lang = voice.lang;
+        u.rate = rate;
+        u.pitch = 1;
+        u.onend = finish;
+        u.onerror = finish;
+        synth.speak(u);
+        setTimeout(finish, 1500 + text.length * 130); // a volte la fine della frase non viene segnalata
+      } catch (e) { finish(); }
+    });
+  }
+  function stopVoice() {
+    voiceRun++;
+    voiceChain = Promise.resolve();
+    if (synth) { synth.cancel(); }
+    if (clipSource) {
+      try { clipSource.stop(); } catch (e) { /* già finita */ }
+      clipSource = null;
+    }
+  }
+  // Dice le frasi una dopo l'altra: le vocali da sole sono registrazioni, il resto lo legge la voce del dispositivo
+  function speakSeq(parts, interrupt = true) {
+    if (muted) return false;
+    const vowelOf = (p) => (p.length === 1 && VOWELS.includes(p.toUpperCase()) ? p.toUpperCase() : '');
+    if (!(synth && voice) && !parts.some((p) => clipBuffers[vowelOf(p)])) return false;
+    if (interrupt) stopVoice();
+    const run = voiceRun;
+    voiceChain = voiceChain.then(async () => {
+      for (const part of parts) {
+        if (run !== voiceRun) return;
+        const v = vowelOf(part);
+        if (v && clipBuffers[v]) await playClip(v);
+        else await sayText(v ? SPOKEN[v] : part, v ? 0.7 : 0.85);
+      }
+    });
+    return true;
+  }
+  function testVoice() {
+    ensureAudio();
+    unlockSpeech();
+    if (muted) setMuted(false);
+    if (!speakSeq(['Ciao, sono Bit. Scava la vocale', 'a'])) sfx.fanfare();
+  }
+
+  // ---------- stato ----------
+  let W = 0, H = 0, dpr = 1;
+  let B = 32, P = 2, groundY = 0, minerX = 0, stoneX = 0;
+  let hillsFar = [], hillsNear = [], clouds = [], stars = [];
+  let level = 1;
+  let phase = 'menu'; // menu | dawn | prompt | swing | fly | settle | done | summary
+  let paused = false;
+  let phaseT = 0, clock = 0;
+  let night = 0, nightTarget = 0;
+  let build = null, round = null, swing = null, flyer = null;
+  let crack = 0, stoneGrow = 1, stoneShake = 0;
+  let parts = [], falling = [];
+  let recentWords = [], lastVowel = null;
+
+  function freshCount() {
+    const s = {};
+    VOWELS.forEach((v) => { s[v] = 0; });
+    return s;
+  }
+  function makeBuild(plan, placed) {
+    return {
+      plan, placed: placed.slice(0, plan.blocks.length), popAt: {}, complete: false, doneAt: -1,
+      hits: freshCount(), asked: freshCount(), wrong: freshCount(), swaps: {}, dropped: 0,
+    };
+  }
+  function loadBuild() {
+    build = makeBuild(PLANS[data.plan % PLANS.length], data.placed);
+    if (W > 1) geometry();
+  }
+
+  // ---------- geometria ----------
+  function geometry() {
+    // i blocchi si adattano alla costruzione di turno, così sta tutta nello schermo
+    const plan = build ? build.plan : PLANS[0];
+    B = Math.round(clamp(Math.min(W / 13, W / (plan.w + 4), H / (plan.h + 3.6)), 20, 64));
+    P = B / 16;
+    groundY = Math.round(H - B * 1.5);
+    minerX = Math.round(B * 0.5);
+    stoneX = minerX + Math.round(B * 1.15);
+    const r = rng(99);
+    const cols = Math.ceil(W / (B / 2)) + 1;
+    hillsFar = [];
+    hillsNear = [];
+    let a = 3, b = 1;
+    for (let i = 0; i < cols; i++) {
+      if (r() < 0.55) a = clamp(a + (r() < 0.5 ? -1 : 1), 1, 5);
+      if (r() < 0.45) b = clamp(b + (r() < 0.5 ? -1 : 1), 0, 3);
+      hillsFar.push(a);
+      hillsNear.push(b);
+    }
+    if (!clouds.length) {
+      const rc = rng(7);
+      clouds = Array.from({ length: 5 }, () => ({ x: rc() * W, y: 0.4 + rc() * 2.2, w: 2 + ((rc() * 3) | 0) }));
+    }
+  }
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    W = Math.max(1, Math.round(r.width));
+    H = Math.max(1, Math.round(r.height));
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    geometry();
+  }
+  function originX() {
+    return Math.round(Math.max(stoneX + B * 1.6, W - (build.plan.w + 0.6) * B));
+  }
+  function cellPos(cell) {
+    return { x: originX() + cell.c * B, y: groundY - (cell.r + 1) * B };
+  }
+
+  // ---------- giro di gioco ----------
+  function selectedLevel() {
+    const r = document.querySelector('input[name="level"]:checked');
+    return r && r.value === '2' ? 2 : 1;
+  }
+  function pickVowel() {
+    // le vocali uscite meno volte hanno la precedenza, e mai la stessa due volte di fila
+    const pool = VOWELS.filter((v) => v !== lastVowel);
+    const min = Math.min(...pool.map((v) => build.asked[v]));
+    const options = pool.filter((v) => build.asked[v] === min);
+    return options[(Math.random() * options.length) | 0];
+  }
+  function pickWordRound() {
+    const pool = WORDS.filter(([w]) => !recentWords.includes(w));
+    const [text, pic] = pool[(Math.random() * pool.length) | 0];
+    recentWords.push(text);
+    if (recentWords.length > 12) recentWords.shift();
+    const letters = [...text];
+    const idx = letters.map((ch, i) => (VOWELS.includes(ch) ? i : -1)).filter((i) => i >= 0);
+    const fresh = idx.filter((i) => letters[i] !== lastVowel);
+    const from = fresh.length ? fresh : idx;
+    const slot = from[(Math.random() * from.length) | 0];
+    return { v: letters[slot], word: { text, pic, letters, slot }, filledAt: -1, errors: 0 };
+  }
+  function nextRound() {
+    round = level === 2 ? pickWordRound() : { v: pickVowel(), word: null, filledAt: -1, errors: 0 };
+    lastVowel = round.v;
+    build.asked[round.v]++;
+    setPhase('prompt');
+    updateHint();
+    promptVoice();
+  }
+  function promptVoice() {
+    if (!round) return;
+    const said = round.word ? [round.word.text.toLowerCase()] : [];
+    said.push('scava la vocale', round.v.toLowerCase());
+    speakSeq(said);
+  }
+  function press(v) {
+    ensureAudio();
+    unlockSpeech();
+    if (paused || phase !== 'prompt' || !round) { if (!paused && phase === 'menu') slotFx(v, 'ok'); return; }
+    const correct = v === round.v;
+    swing = { correct, v, hit1: false, hit2: false };
+    sfx.swing();
+    if (correct) {
+      slotFx(v, 'ok');
+      build.hits[v]++;
+    } else {
+      slotFx(v, 'bad');
+      round.errors++;
+      build.wrong[round.v]++;
+      const key = `${round.v}>${v}`;
+      build.swaps[key] = (build.swaps[key] || 0) + 1;
+      speakSeq(['questa è la', v.toLowerCase(), 'scava la vocale', round.v.toLowerCase()]);
+    }
+    setPhase('swing');
+    updateHint();
+  }
+  function breakStone() {
+    crack = 0;
+    stoneGrow = 0;
+    const cx = stoneX + B / 2, cy = groundY - B / 2;
+    burst(cx, cy, STONE, 14);
+    burst(cx, cy, [COLOR[swing.v], shade(COLOR[swing.v], 0.4)], 10);
+    sfx.crunch();
+    const p = cellPos(build.plan.blocks[build.placed.length]);
+    flyer = { v: swing.v, x0: cx, y0: cy, x1: p.x + B / 2, y1: p.y + B / 2, t: 0 };
+    round.filledAt = clock;
+    speakSeq(round.word ? [round.word.text.toLowerCase(), 'Bravo!'] : ['Bravo!']);
+    setPhase('fly');
+  }
+  function placeBlock() {
+    const v = flyer.v;
+    flyer = null;
+    const i = build.placed.length;
+    build.placed.push(v);
+    build.popAt[i] = clock;
+    const p = cellPos(build.plan.blocks[i]);
+    burst(p.x + B / 2, p.y + B / 2, [COLOR[v], C.ink], 10);
+    sfx.place(v);
+    if (build.placed.length >= build.plan.blocks.length) {
+      completeBuild();
+    } else {
+      data.placed = build.placed.slice();
+      saveData();
+      setPhase('settle');
+    }
+    updateHud();
+  }
+  // Penalità: con una vocale sbagliata l'ultimo mattone si stacca e cade
+  function dropBrick() {
+    if (!build.placed.length) return;
+    const i = build.placed.length - 1;
+    const v = build.placed.pop();
+    delete build.popAt[i];
+    const p = cellPos(build.plan.blocks[i]);
+    falling.push({
+      v, x: p.x + B / 2, y: p.y + B / 2,
+      vx: (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 60), vy: -160,
+      rot: 0, vr: (Math.random() - 0.5) * 8,
+    });
+    build.dropped++;
+    data.placed = build.placed.slice();
+    saveData();
+    sfx.fall();
+    updateHud();
+  }
+  function completeBuild() {
+    build.complete = true;
+    build.doneAt = clock;
+    data.built.push(build.plan.id);
+    data.plan += 1;
+    data.placed = [];
+    saveData();
+    nightTarget = 1;
+    round = null;
+    updateHint();
+    sfx.fanfare();
+    speakSeq([build.plan.done], false);
+    setPhase('done');
+  }
+  function showSummary() {
+    setPhase('summary');
+    const plan = build.plan;
+    const next = PLANS[data.plan % PLANS.length];
+    $('sum-eyebrow').textContent = `Costruzione numero ${data.built.length}`;
+    $('sum-title').textContent = plan.done;
+    const fell = build.dropped
+      ? ` ${build.dropped === 1 ? 'È caduto 1 mattone' : `Sono caduti ${build.dropped} mattoni`}, ma li hai rimessi a posto.`
+      : '';
+    $('sum-text').textContent = `Hai messo ${plan.blocks.length} mattoni di vocali.${fell}`;
+    $('sum-tally').innerHTML = VOWELS.map((v) => `<li style="--c:var(--v-${v.toLowerCase()})"><b>${v}</b><span>×${build.hits[v]}</span></li>`).join('');
+    const swaps = Object.entries(build.swaps).sort((a, b) => b[1] - a[1]);
+    if (swaps.length) {
+      const [said, chosen] = swaps[0][0].split('>');
+      const n = swaps[0][1];
+      $('sum-tip').textContent = `Da ripassare: quando la voce diceva ${said}, hai premuto ${chosen} ${n === 1 ? 'una volta' : n + ' volte'}.`;
+    } else {
+      $('sum-tip').textContent = 'Tutte le vocali giuste al primo colpo.';
+    }
+    const n = data.built.length;
+    $('sum-village').textContent = `Nel tuo villaggio ci ${n === 1 ? 'è 1 costruzione' : `sono ${n} costruzioni`}.`;
+    $('btn-next').textContent = `Costruisci ${next.name}`;
+    showOverlay('summary');
+  }
+  function nextBuild() {
+    nightTarget = 0;
+    falling = [];
+    loadBuild();
+    showOverlay(null);
+    setPhase('dawn');
+  }
+  function startGame() {
+    ensureAudio();
+    unlockSpeech();
+    level = selectedLevel();
+    data.level = level;
+    // senza voce non si sa quale vocale scavare: riattiva l'audio
+    if (muted) setMuted(false);
+    saveData();
+    loadBuild();
+    falling = [];
+    nightTarget = 0;
+    paused = false;
+    showOverlay(null);
+    setPhase('dawn');
+  }
+  function toMenu() {
+    stopVoice();
+    paused = false;
+    round = null;
+    flyer = null;
+    falling = [];
+    crack = 0;
+    nightTarget = 0;
+    loadBuild();
+    updateHint();
+    setPhase('menu');
+    showOverlay('menu');
+    showMenuNote();
+  }
+  function pause() {
+    if (paused || !PLAY_PHASES.includes(phase)) return;
+    paused = true;
+    stopVoice();
+    showOverlay('pause');
+    updateHud();
+  }
+  function resume() {
+    if (!paused) return;
+    ensureAudio();
+    unlockSpeech();
+    paused = false;
+    showOverlay(null);
+    updateHud();
+    if (phase === 'prompt') promptVoice();
+  }
+  function repeatVoice() {
+    if (paused || !round || !['prompt', 'swing'].includes(phase)) return;
+    promptVoice();
+  }
+
+  // ---------- interfaccia ----------
+  function setPhase(p) {
+    phase = p;
+    phaseT = 0;
+    updateHud();
+  }
+  function showOverlay(name) {
+    overlays.menu.hidden = name !== 'menu';
+    overlays.pause.hidden = name !== 'pause';
+    overlays.summary.hidden = name !== 'summary';
+  }
+  function setMuted(v) {
+    muted = v;
+    data.muted = v;
+    saveData();
+    if (v) stopVoice();
+    btnSound.setAttribute('aria-pressed', String(!muted));
+    btnSound.setAttribute('aria-label', muted ? 'Attiva audio' : 'Disattiva audio');
+    btnSound.title = muted ? 'Audio spento' : 'Audio acceso';
+    $('ic-sound-on').toggleAttribute('hidden', muted);
+    $('ic-sound-off').toggleAttribute('hidden', !muted);
+  }
+  function slotFx(v, kind) {
+    const el = slotEls[v];
+    if (!el) return;
+    el.classList.remove('ok', 'bad');
+    void el.offsetWidth;
+    el.classList.add(kind);
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove(kind), 260);
+  }
+  function updateHint() {
+    // aiuto dopo due errori sulla stessa vocale
+    VOWELS.forEach((v) => slotEls[v].classList.toggle('hint', !!(round && round.errors >= 2 && round.v === v)));
+  }
+  function showMenuNote() {
+    const el = $('menu-note');
+    const going = data.placed.length > 0;
+    $('btn-start').textContent = going ? 'Continua' : 'Gioca';
+    if (going) {
+      el.textContent = `Stai costruendo ${build.plan.name}: ${data.placed.length} mattoni su ${build.plan.blocks.length}.`;
+    } else if (data.built.length) {
+      const n = data.built.length;
+      el.textContent = `Nel tuo villaggio ci ${n === 1 ? 'è 1 costruzione' : `sono ${n} costruzioni`}. Ora tocca a ${build.plan.name}.`;
+    }
+    el.hidden = !going && !data.built.length;
+  }
+  function updateHud() {
+    if (!build) return;
+    $('hud-plan').textContent = build.plan.title;
+    $('hud-count').textContent = `${build.placed.length}/${build.plan.blocks.length}`;
+    $('hud-village').textContent = data.built.length;
+    btnPause.disabled = !PLAY_PHASES.includes(phase);
+    $('ic-pause').toggleAttribute('hidden', paused);
+    $('ic-play').toggleAttribute('hidden', !paused);
+    btnPause.setAttribute('aria-label', paused ? 'Riprendi' : 'Pausa');
+  }
+
+  // ---------- particelle (quadratini) ----------
+  function burst(x, y, cols, n) {
+    const count = Math.min(reduceMotion ? Math.ceil(n / 2) : n, Math.max(0, 400 - parts.length));
+    for (let i = 0; i < count; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.6;
+      const s = 80 + Math.random() * 200;
+      const life = 0.4 + Math.random() * 0.5;
+      parts.push({
+        x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life, max: life,
+        color: cols[(Math.random() * cols.length) | 0], size: P * (2 + ((Math.random() * 2) | 0)),
+      });
+    }
+  }
+
+  // ---------- aggiornamento ----------
+  function update(dt) {
+    clock += dt;
+    phaseT += dt;
+    night += clamp(nightTarget - night, -dt * 0.7, dt * 0.7);
+    for (const c of clouds) {
+      c.x += B * 0.25 * dt;
+      if (c.x > W + B) c.x = -c.w * B - B;
+    }
+    stoneGrow = Math.min(1, stoneGrow + dt * 2.2);
+    stoneShake = Math.max(0, stoneShake - dt);
+
+    switch (phase) {
+      case 'dawn':
+        if (phaseT >= 0.9 && night < 0.05) nextRound();
+        break;
+      case 'swing':
+        if (!swing.hit1 && phaseT >= 0.25) {
+          swing.hit1 = true;
+          if (swing.correct) {
+            crack = 1;
+            sfx.tok();
+            burst(stoneX + B * 0.2, groundY - B * 0.7, STONE, 4);
+          } else {
+            sfx.tonc();
+            stoneShake = 0.3;
+            burst(stoneX + B * 0.2, groundY - B * 0.7, ['#6a6a6a', '#9a9a9a'], 5);
+            dropBrick();
+          }
+        }
+        if (swing.correct && !swing.hit2 && phaseT >= 0.5) { swing.hit2 = true; breakStone(); }
+        if (!swing.correct && phaseT >= 0.42) setPhase('prompt');
+        break;
+      case 'fly':
+        flyer.t += dt / 0.65;
+        if (flyer.t >= 1) placeBlock();
+        break;
+      case 'settle':
+        if (phaseT >= 0.6) nextRound();
+        break;
+      case 'done':
+        if (phaseT >= 2.8) showSummary();
+        break;
+      default:
+        break;
+    }
+
+    for (let i = falling.length - 1; i >= 0; i--) {
+      const f = falling[i];
+      f.vy += 900 * dt;
+      f.x += f.vx * dt;
+      f.y += f.vy * dt;
+      f.rot += f.vr * dt;
+      if (f.y >= groundY - B * 0.5) {
+        falling.splice(i, 1);
+        burst(f.x, groundY - B * 0.3, [COLOR[f.v], '#d9d1bf', shade(COLOR[f.v], -0.3)], 16);
+        sfx.crunch();
+      }
+    }
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.life -= dt;
+      if (p.life <= 0) { parts.splice(i, 1); continue; }
+      p.vx *= 1 - 1.4 * dt;
+      p.vy += 520 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+  }
+
+  // ---------- disegno ----------
+  function drawTex(img, x, y, size) {
+    ctx.drawImage(img, Math.round(x), Math.round(y), Math.round(size), Math.round(size));
+  }
+  function drawLetter(v, cx, cy, size) {
+    ctx.font = `700 ${Math.round(size)}px ${BODY}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(2, size * 0.2);
+    ctx.strokeStyle = C.edge;
+    ctx.strokeText(v, cx, cy + size * 0.05);
+    ctx.fillStyle = C.ink;
+    ctx.fillText(v, cx, cy + size * 0.05);
+  }
+  function drawSky() {
+    const n = SKY_DAY.length;
+    const bh = Math.ceil(groundY / n);
+    for (let i = 0; i < n; i++) {
+      ctx.fillStyle = mix(SKY_DAY[i], SKY_NIGHT[i], night);
+      ctx.fillRect(0, i * bh, W, bh + 1);
+    }
+    if (night > 0.02) {
+      ctx.fillStyle = C.ink;
+      for (const s of stars) {
+        ctx.globalAlpha = night * (0.5 + 0.5 * Math.sin(clock * 2 + s.tw));
+        ctx.fillRect(Math.round(s.x * W), Math.round(s.y * groundY * 0.7), P, P);
+      }
+      ctx.globalAlpha = 1;
+    }
+    const sx = Math.round(B * 0.6), sy = Math.round(B * 0.4);
+    if (night < 0.98) {
+      ctx.globalAlpha = 1 - night;
+      ctx.fillStyle = '#ffd84a';
+      ctx.fillRect(sx, sy, B, B);
+      ctx.fillStyle = '#fff2a8';
+      ctx.fillRect(sx + P * 3, sy + P * 3, B - P * 6, B - P * 6);
+      ctx.globalAlpha = 1;
+    }
+    if (night > 0.02) {
+      ctx.globalAlpha = night;
+      ctx.fillStyle = '#e8e4d2';
+      ctx.fillRect(sx, sy, B, B);
+      ctx.fillStyle = '#c9c3ad';
+      ctx.fillRect(sx + P * 3, sy + P * 4, P * 3, P * 3);
+      ctx.fillRect(sx + P * 9, sy + P * 9, P * 4, P * 3);
+      ctx.globalAlpha = 1;
+    }
+    ctx.globalAlpha = 1 - night * 0.6;
+    for (const c of clouds) {
+      const x = Math.round(c.x), y = Math.round(c.y * B), w = c.w * B;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, w, Math.round(B * 0.5));
+      ctx.fillRect(x + B * 0.5, y - Math.round(B * 0.25), w - B, Math.round(B * 0.25));
+      ctx.fillStyle = '#e3eef8';
+      ctx.fillRect(x, y + Math.round(B * 0.375), w, Math.round(B * 0.125));
+    }
+    ctx.globalAlpha = 1;
+  }
+  function drawHills(list, unit, lift, color) {
+    ctx.fillStyle = color;
+    const w = B / 2;
+    list.forEach((h, i) => {
+      const top = groundY - h * unit - lift;
+      ctx.fillRect(Math.round(i * w), Math.round(top), Math.ceil(w), Math.ceil(groundY - top + 1));
+    });
+  }
+  function drawVillage() {
+    const done = build.complete ? data.built.slice(0, -1) : data.built;
+    const list = done.slice(-6);
+    if (!list.length) return;
+    const sb = Math.max(4, Math.round(B * 0.28));
+    let x = Math.round(stoneX + B * 1.4);
+    const base = groundY - Math.round(B * 0.2);
+    const body = mix('#8c7a62', '#1a2238', night);
+    for (const id of list) {
+      const plan = PLANS.find((p) => p.id === id);
+      for (const cell of plan.cells) {
+        if ('FSLM~'.includes(cell.kind)) continue;
+        const cx = x + cell.c * sb, cy = base - (cell.r + 1) * sb;
+        ctx.fillStyle = cell.kind === 'W' && night > 0.3 ? rgba('#ffc45a', night) : body;
+        ctx.fillRect(cx, cy, sb, sb);
+      }
+      x += (plan.w + 1.5) * sb;
+      if (x > W - B) break;
+    }
+  }
+  function drawGround() {
+    for (let x = 0; x < W; x += B) {
+      drawTex(TEX.grass, x, groundY, B);
+      drawTex(TEX.dirt, x, groundY + B, B);
+    }
+  }
+  function drawBuild() {
+    const plan = build.plan;
+    const nextIdx = ['prompt', 'swing', 'fly'].includes(phase) ? build.placed.length : -1;
+    const pop = build.complete ? easeOutBack(clamp((clock - build.doneAt) / 0.35, 0, 1)) : 0;
+    // l'acqua c'è sempre; porte, finestre e decorazioni arrivano quando la costruzione è finita
+    for (const cell of plan.cells) {
+      if (cell.kind !== '~') continue;
+      const p = cellPos(cell);
+      drawWater(p.x, p.y);
+    }
+    for (const cell of plan.cells) {
+      if ('#R~M'.includes(cell.kind)) continue;
+      const { x, y } = cellPos(cell);
+      if (!build.complete) {
+        if ('WDG'.includes(cell.kind)) ghost(x, y, 0.22, false);
+        continue;
+      }
+      const s = B * pop;
+      const ix = x + (B - s) / 2, iy = y + (B - s) / 2;
+      if (cell.kind === 'D') drawTex(TEX.door, ix, iy, s);
+      else if (cell.kind === 'W') drawTex(TEX.glass, ix, iy, s);
+      else if (cell.kind === 'G') drawGate(ix, iy, s);
+      else if (cell.kind === 'F') drawFlag(x, y, cell.c, pop);
+      else if (cell.kind === 'S') drawSmoke(x, y);
+      else if (cell.kind === 'L') drawLamp(x, y);
+    }
+    plan.blocks.forEach((cell, i) => {
+      const { x, y } = cellPos(cell);
+      if (i < build.placed.length) {
+        const v = build.placed[i];
+        const age = build.popAt[i] !== undefined ? clock - build.popAt[i] : 9;
+        const k = 0.4 + 0.6 * easeOutBack(clamp(age / 0.3, 0, 1));
+        const s = B * k;
+        drawTex(cell.kind === 'R' ? TEX.roof[v] : TEX.brick[v], x + (B - s) / 2, y + (B - s) / 2, s);
+        drawLetter(v, x + B / 2, y + B / 2, s * 0.5);
+      } else {
+        ghost(x, y, i === nextIdx ? 0.5 + 0.35 * Math.sin(clock * 5) : 0.3, i === nextIdx);
+      }
+    });
+    const hub = plan.cells.find((c) => c.kind === 'M');
+    if (hub) {
+      const p = cellPos(hub);
+      drawMill(p.x + B / 2, p.y + B / 2, pop);
+    }
+    if (build.complete) for (const tx of torchSpots()) drawTorch(tx);
+  }
+  function drawWater(x, y) {
+    ctx.fillStyle = mix('#3d7ad6', '#16295a', night);
+    ctx.fillRect(x, y, B, B);
+    ctx.fillStyle = rgba('#cfe8ff', 0.55 - night * 0.3);
+    for (let k = 0; k < 3; k++) {
+      const off = (clock * B * 0.4 + k * B * 0.37) % B;
+      ctx.fillRect(x + off, y + P * (3 + k * 5), Math.min(P * 4, B - off), P);
+    }
+  }
+  function drawGate(x, y, s) {
+    ctx.fillStyle = '#2a2018';
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = '#7a7a7a';
+    for (let k = 1; k < 4; k++) ctx.fillRect(x + (s * k) / 4 - P / 2, y, P, s);
+    ctx.fillRect(x, y + s * 0.4, s, P);
+  }
+  function drawFlag(x, y, c, k) {
+    const px = x + B * 0.4;
+    ctx.fillStyle = '#5e3e1e';
+    ctx.fillRect(px, y + B * (1 - k), P * 1.5, B * k);
+    if (k < 0.6) return;
+    const col = COLOR[VOWELS[c % 5]];
+    const fw = B * 0.5, fh = B * 0.3;
+    for (let s = 0; s < 4; s++) {
+      const wy = Math.sin(clock * 6 + s * 0.9) * P * 1.2 * (s / 3);
+      ctx.fillStyle = s % 2 ? shade(col, -0.15) : col;
+      ctx.fillRect(px + P * 1.5 + (s * fw) / 4, y + B * 0.08 + wy, fw / 4 + 0.5, fh);
+    }
+  }
+  function drawSmoke(x, y) {
+    for (let k = 0; k < 3; k++) {
+      const t = (clock * 0.5 + k / 3) % 1;
+      const s = P * (3 + t * 5);
+      ctx.fillStyle = `rgba(225,225,225,${0.65 * (1 - t)})`;
+      ctx.fillRect(x + B * 0.35 + Math.sin(t * 5 + k) * P * 2, y + B - t * B * 1.5 - s / 2, s, s);
+    }
+  }
+  function drawLamp(x, y) {
+    const big = build.plan.id === 'faro';
+    const w = big ? B * 0.8 : B * 0.36, h = big ? B * 0.75 : B * 0.45;
+    const lx = x + (B - w) / 2, ly = y + B - h;
+    ctx.fillStyle = '#2b2b2b';
+    ctx.fillRect(lx, ly, w, h);
+    ctx.fillStyle = night > 0.2 ? '#ffe28a' : '#fff6c9';
+    ctx.fillRect(lx + P, ly + P * 1.5, w - P * 2, h - P * 3);
+    ctx.fillStyle = big ? '#c9402f' : '#2b2b2b';
+    ctx.fillRect(lx - P, ly - P * 2, w + P * 2, P * 2);
+  }
+  function drawMill(cx, cy, k) {
+    if (k <= 0.01) {
+      ctx.strokeStyle = rgba(C.ink, 0.2);
+      ctx.lineWidth = P;
+      ctx.setLineDash([P * 2, P * 2]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, B * 1.9, 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      return;
+    }
+    const len = B * 2 * k;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(clock * 1.2);
+    for (let i = 0; i < 4; i++) {
+      ctx.rotate(Math.PI / 2);
+      ctx.fillStyle = '#6e4a24';
+      ctx.fillRect(-P, 0, P * 2, len);
+      ctx.fillStyle = '#efe6cf';
+      ctx.fillRect(P, B * 0.3, B * 0.42, Math.max(0, len - B * 0.3));
+      ctx.fillStyle = '#c9b48a';
+      for (let yy = B * 0.3; yy < len; yy += B * 0.3) ctx.fillRect(P, yy, B * 0.42, P);
+    }
+    ctx.restore();
+    ctx.fillStyle = '#5e3e1e';
+    ctx.fillRect(cx - B * 0.2, cy - B * 0.2, B * 0.4, B * 0.4);
+  }
+  function ghost(x, y, alpha, fill) {
+    if (fill) {
+      ctx.fillStyle = rgba(C.ink, 0.14);
+      ctx.fillRect(x, y, B, B);
+    }
+    ctx.strokeStyle = rgba(C.ink, alpha);
+    ctx.lineWidth = P;
+    ctx.setLineDash([P * 2, P * 2]);
+    ctx.strokeRect(x + P / 2, y + P / 2, B - P, B - P);
+    ctx.setLineDash([]);
+  }
+  function torchSpots() {
+    const ox = originX();
+    return [ox - B * 0.55, ox + build.plan.w * B + B * 0.15].filter((tx) => tx >= stoneX + B * 1.2 && tx <= W - B * 0.4);
+  }
+  function drawTorch(x) {
+    const p = P;
+    ctx.fillStyle = MINER.wood;
+    ctx.fillRect(Math.round(x), groundY - p * 10, p * 2, p * 10);
+    const f = Math.sin(clock * 18 + x) > 0;
+    ctx.fillStyle = f ? '#ffd84a' : '#ff9b3d';
+    ctx.fillRect(Math.round(x) - p, groundY - p * 13, p * 4, p * 3);
+    ctx.fillStyle = '#fff2a8';
+    ctx.fillRect(Math.round(x), groundY - p * 12, p * 2, p * 2);
+  }
+  function drawStone() {
+    const g = easeOutBack(stoneGrow);
+    const s = B * Math.max(0, g);
+    const dx = stoneShake > 0 ? Math.sin(clock * 60) * P * 1.5 : 0;
+    const x = stoneX + (B - s) / 2 + dx, y = groundY - s;
+    if (s < 1) return;
+    drawTex(TEX.stone, x, y, s);
+    if (crack > 0) {
+      ctx.fillStyle = 'rgba(30,30,30,0.85)';
+      const k = s / 16;
+      for (const [cx, cy, w, h] of [[3, 4, 3, 1], [5, 5, 1, 3], [6, 8, 3, 1], [9, 9, 1, 3], [10, 3, 1, 2], [11, 5, 2, 1]]) {
+        ctx.fillRect(x + cx * k, y + cy * k, w * k, h * k);
+      }
+    }
+  }
+  function armAngle() {
+    if (phase === 'swing' && swing) {
+      const strikes = swing.correct ? 2 : 1;
+      if (phaseT < strikes * 0.25) {
+        const t = (phaseT % 0.25) / 0.25;
+        return t < 0.45 ? lerp(-0.35, -2.6, easeOut(t / 0.45)) : lerp(-2.6, -0.75, easeIn((t - 0.45) / 0.55));
+      }
+      return -0.75;
+    }
+    return -0.35 + Math.sin(clock * 2) * 0.04;
+  }
+  function drawMiner() {
+    const p = P;
+    const x0 = minerX, y0 = groundY - 32 * p;
+    const R = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x0 + x * p, y0 + y * p, w * p, h * p); };
+    R(1, 8, 3, 8, MINER.shirtDark);
+    R(1, 16, 3, 2, MINER.skinDark);
+    R(4, 20, 4, 8, MINER.overall);
+    R(8, 20, 4, 8, MINER.overallDark);
+    R(4, 28, 4, 4, MINER.boots);
+    R(8, 28, 4, 4, MINER.boots);
+    R(4, 8, 8, 12, MINER.shirt);
+    R(4, 13, 8, 7, MINER.overall);
+    R(5, 8, 1, 5, MINER.overall);
+    R(10, 8, 1, 5, MINER.overall);
+    R(7, 15, 2, 2, MINER.helmet);
+    R(4, 2, 8, 6, MINER.skin);
+    R(4, 7, 8, 1, MINER.skinDark);
+    R(6, 4, 1, 2, MINER.eye);
+    R(9, 4, 1, 2, MINER.eye);
+    R(7, 6, 2, 1, MINER.skinDark);
+    R(3, 0, 10, 2, MINER.helmet);
+    R(3, 2, 10, 1, MINER.helmetDark);
+    R(11, 0, 2, 2, MINER.lamp);
+    // braccio con il piccone, che ruota attorno alla spalla
+    ctx.save();
+    ctx.translate(x0 + 13 * p, y0 + 9 * p);
+    ctx.rotate(armAngle());
+    const A = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x * p, y * p, w * p, h * p); };
+    A(-1.5, -1, 3, 9, MINER.shirt);
+    A(-1.5, 8, 3, 2, MINER.skin);
+    A(-0.75, 9, 1.5, 9, MINER.wood);
+    A(-5, 17, 10, 2, MINER.iron);
+    A(-5, 19, 2, 1, MINER.ironDark);
+    A(3, 19, 2, 1, MINER.ironDark);
+    ctx.restore();
+  }
+  function drawFlyer() {
+    if (!flyer) return;
+    const t = easeInOut(Math.min(1, flyer.t));
+    const x = lerp(flyer.x0, flyer.x1, t);
+    const y = lerp(flyer.y0, flyer.y1, t) - Math.sin(Math.PI * t) * B * 2;
+    const s = lerp(B * 0.55, B, t);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.sin(t * Math.PI) * 0.4);
+    drawTex(TEX.ore[flyer.v], -s / 2, -s / 2, s);
+    ctx.restore();
+    drawLetter(flyer.v, x, y, s * 0.5);
+  }
+  function drawGlows() {
+    if (night < 0.02) return;
+    ctx.fillStyle = `rgba(5,8,30,${0.35 * night})`;
+    ctx.fillRect(0, 0, W, H);
+    if (build.complete) {
+      for (const cell of build.plan.cells) {
+        if (cell.kind !== 'W') continue;
+        const { x, y } = cellPos(cell);
+        ctx.fillStyle = rgba('#ffc45a', 0.12 * night);
+        ctx.beginPath();
+        ctx.arc(x + B / 2, y + B / 2, B * 1.1, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = rgba('#ffc45a', 0.75 * night);
+        ctx.fillRect(x + P * 2, y + P * 2, B - P * 4, B - P * 4);
+      }
+      for (const cell of build.plan.cells) {
+        if (cell.kind !== 'L') continue;
+        const { x, y } = cellPos(cell);
+        const lx = x + B / 2, ly = y + B * 0.65;
+        ctx.fillStyle = rgba('#ffd27a', 0.18 * night);
+        ctx.beginPath();
+        ctx.arc(lx, ly, B * 1.3, 0, TAU);
+        ctx.fill();
+        drawLamp(x, y);
+        if (build.plan.id === 'faro') {
+          // il fascio del faro gira lentamente sul mare
+          const dir = Math.cos(clock * 1.4);
+          const len = W * 0.7;
+          ctx.fillStyle = rgba('#fff3b0', 0.22 * night * Math.abs(dir));
+          ctx.beginPath();
+          ctx.moveTo(lx, ly);
+          ctx.lineTo(lx + dir * len, ly - B * 0.9);
+          ctx.lineTo(lx + dir * len, ly + B * 0.9);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+      for (const tx of torchSpots()) {
+        ctx.fillStyle = rgba('#ffb347', 0.16 * night);
+        ctx.beginPath();
+        ctx.arc(tx + P, groundY - P * 12, B * 1.2, 0, TAU);
+        ctx.fill();
+        drawTorch(tx);
+      }
+    }
+    // la lampada sul casco di Bit
+    const lx = minerX + P * 13, ly = groundY - P * 31;
+    ctx.fillStyle = rgba('#fff0aa', 0.16 * night);
+    ctx.beginPath();
+    ctx.moveTo(lx, ly);
+    ctx.lineTo(lx + B * 3, ly - B * 0.6);
+    ctx.lineTo(lx + B * 3, ly + B * 1.8);
+    ctx.closePath();
+    ctx.fill();
+  }
+  function bubbleRect() {
+    const w = Math.round(B * 1.5), h = Math.round(B * 0.95);
+    return { x: Math.round(minerX - B * 0.1), y: Math.round(groundY - 2 * B - h - B * 0.45), w, h };
+  }
+  function drawBubble() {
+    if (level !== 1 || !round || !['prompt', 'swing'].includes(phase)) return;
+    const r = bubbleRect();
+    const p = P;
+    ctx.fillStyle = C.edge;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.fillRect(r.x + B * 0.45, r.y + r.h, p * 4, p * 2);
+    ctx.fillRect(r.x + B * 0.45 + p, r.y + r.h + p * 2, p * 2, p * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(r.x + p, r.y + p, r.w - p * 2, r.h - p * 2);
+    ctx.fillRect(r.x + B * 0.45 + p, r.y + r.h - p, p * 2, p * 2);
+    // altoparlante: tocca per risentire
+    const cx = r.x + r.h * 0.5, cy = r.y + r.h / 2, u = r.h / 10;
+    ctx.fillStyle = C.edge;
+    ctx.fillRect(cx - u * 2.5, cy - u * 1.2, u * 1.6, u * 2.4);
+    ctx.beginPath();
+    ctx.moveTo(cx - u * 1, cy - u * 1.2);
+    ctx.lineTo(cx + u * 1.2, cy - u * 3);
+    ctx.lineTo(cx + u * 1.2, cy + u * 3);
+    ctx.lineTo(cx - u * 1, cy + u * 1.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = `700 ${Math.round(r.h * 0.62)}px ${DISPLAY}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('?', r.x + r.w * 0.7, cy + p * 0.5);
+  }
+  function signLayout() {
+    const wd = round.word;
+    const n = wd.letters.length;
+    const h = Math.round(B * 1.45);
+    const pad = Math.round(B * 0.18);
+    const pic = h - pad * 4;
+    let size = Math.round(B * 0.7);
+    let lw = Math.round(size * 0.82);
+    let w = pad * 5 + pic + n * lw;
+    const maxW = W - 24;
+    if (w > maxW) {
+      const k = (maxW - pad * 5 - pic) / (n * lw);
+      size = Math.floor(size * k);
+      lw = Math.floor(lw * k);
+      w = maxW;
+    }
+    const x = Math.round((W - w) / 2), y = Math.round(B * 0.3);
+    return { x, y, w, h, pad, pic, size, lw, lx: x + pad * 4 + pic };
+  }
+  function drawSign() {
+    if (level !== 2 || !round || !round.word || !['prompt', 'swing', 'fly', 'settle'].includes(phase)) return;
+    const L = signLayout();
+    const p = P;
+    ctx.fillStyle = C.edge;
+    ctx.fillRect(L.x - p, L.y - p, L.w + p * 2, L.h + p * 2);
+    ctx.fillStyle = WOOD[0];
+    ctx.fillRect(L.x, L.y, L.w, L.h);
+    ctx.fillStyle = WOOD[1];
+    for (let yy = L.y + p * 4; yy < L.y + L.h; yy += p * 5) ctx.fillRect(L.x, yy, L.w, p);
+    ctx.fillStyle = '#f3e5c0';
+    ctx.fillRect(L.x + L.pad, L.y + L.pad, L.w - L.pad * 2, L.h - L.pad * 2);
+    const cy = L.y + L.h / 2;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `${Math.round(L.pic * 0.85)}px ${EMOJI}`;
+    ctx.fillStyle = '#3b2412';
+    ctx.fillText(round.word.pic, L.x + L.pad * 2 + L.pic / 2, cy + L.pic * 0.04);
+    round.word.letters.forEach((ch, i) => {
+      const cx = L.lx + L.lw * (i + 0.5);
+      if (i === round.word.slot && round.filledAt < 0) {
+        const sw = L.lw * 0.8, sh = L.size * 1.05;
+        ctx.fillStyle = 'rgba(59,36,18,0.1)';
+        ctx.fillRect(cx - sw / 2, cy - sh / 2, sw, sh);
+        ctx.strokeStyle = `rgba(59,36,18,${0.45 + 0.35 * Math.sin(clock * 5)})`;
+        ctx.lineWidth = p;
+        ctx.setLineDash([p * 2, p * 2]);
+        ctx.strokeRect(cx - sw / 2, cy - sh / 2, sw, sh);
+        ctx.setLineDash([]);
+        return;
+      }
+      const pop = i === round.word.slot ? clamp((clock - round.filledAt) / 0.3, 0, 1) : 1;
+      const k = 0.4 + 0.6 * easeOutBack(pop);
+      ctx.save();
+      ctx.translate(cx, cy + L.size * 0.04);
+      ctx.scale(k, k);
+      ctx.font = `700 ${L.size}px ${BODY}`;
+      ctx.fillStyle = VOWELS.includes(ch) ? INK[ch] : '#3b2412';
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+    });
+  }
+  function render() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    drawSky();
+    drawHills(hillsFar, B / 2, B * 0.6, mix('#86b86a', '#22364a', night));
+    drawVillage();
+    drawHills(hillsNear, B / 2, 0, mix('#5d9a45', '#1b3326', night));
+    drawGround();
+    drawBuild();
+    drawStone();
+    drawMiner();
+    drawFlyer();
+    for (const f of falling) {
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(f.rot);
+      drawTex(TEX.brick[f.v], -B / 2, -B / 2, B);
+      drawLetter(f.v, 0, 0, B * 0.5);
+      ctx.restore();
+    }
+    for (const p of parts) {
+      ctx.globalAlpha = clamp(p.life / p.max * 2, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+    drawGlows();
+    drawBubble();
+    drawSign();
+  }
+
+  let lastT = 0;
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000));
+    lastT = now;
+    if (!paused) update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- input ----------
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+    const onControl = e.target && e.target.closest && e.target.closest('button, input');
+    if ((k === ' ' || k === 'Enter') && onControl && !(k === 'Enter' && e.target.type === 'radio')) return;
+    if (k === ' ' || k === 'Spacebar') {
+      e.preventDefault();
+      if (e.repeat) return;
+      if (paused) resume();
+      else if (PLAY_PHASES.includes(phase)) pause();
+      else if (phase === 'summary') nextBuild();
+      else startGame();
+      return;
+    }
+    if (k === 'Escape') {
+      if (paused) resume(); else pause();
+      return;
+    }
+    if (k === 'Enter') {
+      e.preventDefault();
+      if (phase === 'menu') startGame();
+      else if (phase === 'summary') nextBuild();
+      else repeatVoice();
+      return;
+    }
+    if (e.repeat || !k || k.length !== 1) return;
+    const L = k.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    if (!VOWELS.includes(L)) return;
+    if (onControl && phase === 'menu') return;
+    e.preventDefault();
+    press(L);
+  });
+  Object.keys(slotEls).forEach((v) => {
+    slotEls[v].addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      press(v);
+    });
+  });
+  // Toccare il fumetto o il cartello fa risentire la voce
+  canvas.addEventListener('pointerdown', (e) => {
+    ensureAudio();
+    unlockSpeech();
+    if (paused || !round) return;
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const box = level === 1 ? bubbleRect() : round.word ? signLayout() : null;
+    if (box && x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h) repeatVoice();
+  });
+  $('btn-start').addEventListener('click', startGame);
+  $('btn-next').addEventListener('click', nextBuild);
+  $('btn-menu').addEventListener('click', toMenu);
+  $('btn-resume').addEventListener('click', resume);
+  $('btn-quit').addEventListener('click', toMenu);
+  $('btn-voice').addEventListener('click', testVoice);
+  $('btn-repeat').addEventListener('click', (e) => {
+    unlockSpeech();
+    repeatVoice();
+    e.currentTarget.blur();
+  });
+  btnPause.addEventListener('click', () => {
+    if (paused) resume(); else pause();
+    btnPause.blur();
+  });
+  btnSound.addEventListener('click', () => {
+    setMuted(!muted);
+    if (!muted) ensureAudio();
+    btnSound.blur();
+  });
+  document.querySelectorAll('input[name="level"]').forEach((r) => {
+    r.addEventListener('change', () => {
+      level = selectedLevel();
+      data.level = level;
+      saveData();
+    });
+  });
+  window.addEventListener('blur', pause);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+
+  // ---------- avvio ----------
+  function start(saved) {
+    saved = saved || {};
+    if (saved.data) data = { ...data, ...saved.data };
+    level = data.level === 2 ? 2 : 1;
+    $('l-' + level).checked = true;
+    setMuted(!!data.muted);
+    findVoices();
+    VOWELS.forEach((v) => { slotEls[v].style.backgroundImage = `url(${TEX.ore[v].toDataURL()})`; });
+
+    stars = Array.from({ length: 50 }, () => ({ x: Math.random(), y: Math.random(), tw: Math.random() * TAU }));
+    resize();
+    if ('ResizeObserver' in window) new ResizeObserver(resize).observe(stage);
+    else window.addEventListener('resize', resize);
+    loadBuild();
+    setPhase('menu');
+    showOverlay('menu');
+    showMenuNote();
+    updateHud();
+    try { window.claude?.hot?.snapshot?.(() => ({ data })); } catch (e) { /* non in un viewer */ }
+    requestAnimationFrame((ts) => { lastT = ts; requestAnimationFrame(frame); });
+  }
+
+  window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
