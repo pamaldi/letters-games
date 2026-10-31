@@ -1,0 +1,36 @@
+[project]
+name = "xai-experiments"
+version = "0.1.0"
+description = "Esperimenti ed esempi per il cookbook di Interpretable ML / Explainable AI (UniFi 2025-2026)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # stack di base
+    "numpy>=2.5.4",
+    "pandas>=3.1.0",
+    "scipy>=1.18.1",
+    "scikit-learn>=1.7,<1.8",  # gosdt usa force_all_finite (rimosso in 1.8), rulefit n_alphas (rimosso in 1.9)
+    "matplotlib>=3.11.2",
+    "seaborn>=0.13.2",
+    # bias & fairness
+    "fairlearn>=0.15.0",
+    # interpretability by design: regole, alberi ottimi, GAM/EBM
+    "imodels>=3.0.4",
+    "rulefit",
+    "gosdt>=1.0.4",
+    "interpret>=0.7.8",
+    "h2o>=3.46.0.12",  # richiede Java nel PATH
+    # spiegazioni post-hoc
+    "shap>=0.54.1",
+    "lime>=0.2.0.1",
+    "dice-ml>=0.12",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+    "jupyter>=1.1.1",
+]
+
+[tool.uv.sources]
+rulefit = { git = "https://github.com/christophM/rulefit.git" }
