@@ -8,6 +8,8 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '../games');
 const files = ['index.html', ...fs.readdirSync(root).filter(f => f.endsWith('.html'))];
+const numberGames = ['conta-le-meteore.html', 'fiori-dei-numeri.html', 'palloncini-dei-colori.html', 'palloncini-dei-numeri.html'];
+const vowelGames = files.filter(f => !numberGames.includes(f));
 const filePath = file => file === 'index.html' ? path.resolve(root, '../index.html') : path.join(root, file);
 const pagePath = file => file === 'index.html' ? 'index.html' : 'games/' + file;
 for (const file of files) {
@@ -39,7 +41,7 @@ const server = http.createServer((req, res) => {
   try {
     const page = await browser.newPage({ viewport: { width: 1100, height: 850 } });
     const errors = []; page.on('pageerror', e => errors.push(e.message));
-    for (const file of files) {
+    for (const file of vowelGames) {
       await page.goto(`${url}/${pagePath(file)}`); await page.waitForTimeout(200);
       assert.equal(await page.locator('.learn-panel').count(), 1, file);
       assert.equal(await page.evaluate(() => Learning.active().join('')), 'AEIOU');
@@ -299,8 +301,224 @@ const server = http.createServer((req, res) => {
     `));
     assert.deepEqual(finished, ['summary',1,true]);
     assert.equal(await page.locator('#ov-summary').isVisible(), true);
+    // Numbers: Bolt counts the meteors aloud with recorded English clips, then the child taps the number.
+    await page.goto(`${url}/games/conta-le-meteore.html`);
+    assert.equal(await page.locator('.home-link').getAttribute('href'), '../index.html?v=20261025-come-2');
+    assert.equal(await page.locator('.num').count(), 10);
+    const numberClips = await page.evaluate(()=>__gameEval(`(async()=>{ensureAudio(); await clipsReady; return Object.keys(CLIPS).map(k=>[k,clipBuffers[k]?.duration||0]);})()`));
+    assert.equal(numberClips.length, 19);
+    assert(numberClips.every(([,d])=>d>0.3), 'every English clip must decode: '+JSON.stringify(numberClips));
+    await page.evaluate(()=>__gameEval("speed=0; window.__played=[]; playClip=async k=>{__played.push(k);}; setVoiceMode(false);"));
+    await page.getByRole('button',{name:'▶ Inizia'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='ask'"));
+    const first = await page.evaluate(()=>__gameEval("({target,order:[...order],played:[...__played],meteors:meteors.length,counted:document.querySelectorAll('.meteor.counted').length})"));
+    assert.deepEqual([...first.order].sort((a,b)=>a-b), [1,2,3,4,5,6,7,8,9,10]);
+    assert.equal(first.meteors, first.target); assert.equal(first.counted, first.target);
+    const t = first.target, counted = Array.from({length:t},(_,i)=>'n'+(i+1));
+    assert.deepEqual(first.played, ['hello','count',...counted,'n'+t,t===1?'meteorite':'meteorites','find','n'+t]);
+    // A wrong number bonks Bolt but keeps the round and the progress.
+    await page.evaluate(t=>__gameEval(`__played.length=0; choose(${t===10?1:t+1})`), t);
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[phase,roundIdx,[...__played]]")), ['ask',0,['oops','find','n'+t]]);
+    assert.equal(await page.evaluate(()=>document.getElementById('bolt').classList.contains('dizzy')), true);
+    // The right number says "Great job!", then only the number ("five"): the child draws that many balls.
+    await page.evaluate(()=>__gameEval("__played.length=0; choose(target)"));
+    await page.waitForFunction(()=>__gameEval("phase==='draw'"));
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[...__played]")), ['great','n'+t]);
+    assert.equal(await page.locator('#board').isVisible(), true);
+    const box = await page.locator('#canvas').boundingBox();
+    await page.mouse.click(box.x+30, box.y+30);   // a dot is not a ball
+    assert.equal(await page.evaluate(()=>__gameEval('balls.length')), 0);
+    for (let b = 0; b < t; b++) {
+      const cx = box.x + 70 + (b % 5) * 110, cy = box.y + 80 + Math.floor(b / 5) * 120;
+      await page.mouse.move(cx + 35, cy); await page.mouse.down();
+      for (let a = 1; a <= 16; a++) await page.mouse.move(cx + 35*Math.cos(a*Math.PI/8), cy + 35*Math.sin(a*Math.PI/8));
+      await page.mouse.up();
+    }
+    await page.waitForFunction(()=>__gameEval("__played.includes('hero')"));
+    assert.equal(await page.locator('#slots i.on').count(), t);
+    await page.screenshot({path:path.join(require('node:os').tmpdir(),'meteore-draw.png')});
+    // Ten rounds (count, tap, draw) finish the mission.
+    for (let r = 1; r < 10; r++) {
+      await page.waitForFunction(r=>__gameEval(`phase==='ask' && roundIdx===${r}`), r);
+      await page.evaluate(()=>__gameEval("choose(target)"));
+      await page.waitForFunction(()=>__gameEval("phase==='draw'"));
+      await page.evaluate(()=>__gameEval("for(let i=0;i<target;i++) endStroke(Array.from({length:12},(_,a)=>({x:100+40*Math.cos(a/2),y:100+40*Math.sin(a/2)})))"));
+    }
+    await page.waitForFunction(()=>__gameEval("phase==='done'"));
+    assert.equal(await page.locator('#ov-win').isVisible(), true);
+    assert.equal(await page.locator('.stars span.on').count(), 10);
+    await page.setViewportSize({width:390,height:844});
+    await page.getByRole('button',{name:'↻ Gioca ancora'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='ask'")); await page.waitForTimeout(1500);
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth && document.getElementById('pad').getBoundingClientRect().bottom<=innerHeight));
+    assert(await page.evaluate(()=>[...document.querySelectorAll('.meteor')].every(m=>{const r=m.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;})));
+    await page.screenshot({path:path.join(require('node:os').tmpdir(),'meteore-mobile.png')});
+    await page.setViewportSize({width:1100,height:850});
+    // Meteors, voice mode: the child counts aloud and Bolt zaps a meteor for each right number.
+    await page.goto(`${url}/games/conta-le-meteore.html`);
+    await page.evaluate(()=>__gameEval(`speed=0; window.__played=[]; playClip=async k=>{__played.push(k);};
+      Recognition=class { start(){} abort(){} }; shuffle=()=>[4,1,2,3,5,6,7,8,9,10]; setVoiceMode(true);`));
+    await page.getByRole('button',{name:'▶ Inizia'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='count' && rec!==null"));
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[...__played]")), ['hello','count']);
+    assert.equal(await page.locator('#count-voice').isVisible(), true);
+    await page.evaluate(()=>__gameEval("handleCount([{transcript:'one two',isFinal:false}])"));
+    assert.equal(await page.locator('.meteor.counted').count(), 2);
+    await page.evaluate(()=>__gameEval("__played.length=0; handleCount([{transcript:'one two four',isFinal:true}])"));
+    assert.equal(await page.locator('.meteor.counted').count(), 2);
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[...__played]")), ['oops','n3']);
+    await page.waitForFunction(()=>__gameEval("rec!==null"));
+    await page.getByRole('button',{name:/Ha detto «three»/}).click();
+    await page.evaluate(()=>__gameEval("handleCount([{transcript:'for',isFinal:true}])"));
+    await page.waitForFunction(()=>__gameEval("phase==='ask'"));
+    assert.equal(await page.locator('.meteor.counted').count(), 4);
+    assert.equal(await page.locator('#count-voice').isVisible(), false);
+    assert(await page.evaluate(()=>__gameEval("__played.join(' ').endsWith('n4 meteorites find n4')")));
+    // Number flowers: the child counts aloud (fake recogniser), each right number colours a flower; then says the pair.
+    await page.goto(`${url}/games/fiori-dei-numeri.html`);
+    assert.equal(await page.locator('.home-link').getAttribute('href'), '../index.html?v=20261025-come-2');
+    const flowerClips = await page.evaluate(()=>__gameEval(`(async()=>{ensureAudio(); await clipsReady; return Object.keys(CLIPS).map(k=>[k,clipBuffers[k]?.duration||0]);})()`));
+    assert.equal(flowerClips.length, 25);
+    assert(flowerClips.every(([,d])=>d>0.3), 'every flower clip must decode: '+JSON.stringify(flowerClips));
+    await page.evaluate(()=>__gameEval(`speed=0; window.__played=[]; playClip=async k=>{__played.push(k);}; listen=()=>{};
+      window.__recs=0; Recognition=class { start(){ __recs++; } abort(){} };
+      shuffle=()=>[5,1,2,3,4,6,7,8,9,10]; setVoiceMode(true); HOLD_MS=400;`));
+    await page.getByRole('button',{name:'▶ Inizia'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='colour' && __played.length>=2 && rec"));
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[...__played]")), ['hello','ask5']);
+    assert.equal(await page.locator('#count-voice').isVisible(), true);
+    await page.locator('.flower').first().click();            // in voice mode a tap does not colour
+    assert.equal(await page.locator('.flower.on').count(), 0);
+    await page.evaluate(()=>__gameEval("__played.length=0; handleCount([{transcript:'one',isFinal:false}])"));
+    await page.evaluate(()=>__gameEval("handleCount([{transcript:'one to',isFinal:false}])"));   // homophone of two, interim
+    assert.equal(await page.locator('.flower.on').count(), 2);
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[...__played]")), [], 'no English numbers while counting');
+    await page.evaluate(()=>__gameEval("handleCount([{transcript:'one to four',isFinal:true}])"));   // skipped three
+    assert.equal(await page.locator('.flower.on').count(), 2);
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[...__played]")), ['again']);
+    assert(await page.locator('#count-heard').evaluate(e=>e.classList.contains('bad')));
+    await page.waitForFunction(()=>__gameEval("rec!==null"));    // listening again after the correction
+    await page.evaluate(()=>__gameEval("handleCount([{transcript:'3 4',isFinal:true}])"));
+    assert.equal(await page.locator('.flower.on').count(), 4);
+    await page.getByRole('button',{name:/Ha detto «five»/}).click();   // adult fallback for a missed word
+    // Five reached: the row stays open; going on to "six" is a mistake and the row starts again.
+    await page.waitForFunction(()=>__gameEval("rec!==null"));
+    assert.equal(await page.evaluate(()=>__gameEval("phase")), 'colour');
+    await page.evaluate(()=>__gameEval("__played.length=0; consumed=[]; handleCount([{transcript:'six',isFinal:false}])"));
+    assert.equal(await page.locator('.flower.on').count(), 0);
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[...__played]")), ['again']);
+    assert.match(await page.locator('#prompt').textContent(), /Erano 5/);
+    await page.waitForFunction(()=>__gameEval("rec!==null"));
+    await page.evaluate(()=>__gameEval("__played.length=0; handleCount([{transcript:'one two three four five',isFinal:true}])"));
+    assert.equal(await page.locator('.flower.on').count(), 5);
+    assert.equal(await page.evaluate(()=>__gameEval("phase")), 'colour');
+    await page.waitForFunction(()=>!document.getElementById('say').hidden && __played.includes('sayit'));
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[...__played]")), ['pair5','sayit']);
+    assert.equal(await page.locator('.flower.on').count(), 5);
+    assert.equal(await page.locator('#mini .mini-row.now i.on').count(), 5);
+    await page.screenshot({path:path.join(require('node:os').tmpdir(),'fiori-say.png')});
+    assert.equal(await page.evaluate(()=>__gameEval("heard(['five red'])")), false);
+    assert(await page.evaluate(()=>__gameEval("__played.includes('again') && phase==='say'")));
+    assert.equal(await page.evaluate(()=>__gameEval("heard(['I think five green'])")), true);
+    await page.waitForFunction(()=>__gameEval("__played.includes('hero')"));
+    // Round two in tap mode: the parent switches the microphone off.
+    await page.waitForFunction(()=>__gameEval("phase==='colour' && roundIdx===1"));
+    await page.locator('#voice-mode').click();
+    assert.equal(await page.locator('#count-voice').isVisible(), false);
+    await page.locator('.flower').first().click();
+    await page.waitForFunction(()=>__gameEval("phase==='say'"));
+    await page.locator('.flower').nth(9).click({force:true});   // an extra flower does nothing
+    assert.equal(await page.locator('.flower.on').count(), 1);
+    await page.waitForFunction(()=>!document.getElementById('say').hidden);
+    await page.getByRole('button',{name:'✓ L\'ha detto'}).click();
+    for (let r = 2; r < 10; r++) {
+      await page.waitForFunction(r=>__gameEval(`phase==='colour' && roundIdx===${r}`), r);
+      await page.evaluate(()=>__gameEval("[...document.querySelectorAll('.flower')].slice(0,target).forEach(f=>f.click())"));
+      await page.waitForFunction(()=>__gameEval("phase==='say' && !document.getElementById('say').hidden"));
+      await page.getByRole('button',{name:'✓ L\'ha detto'}).click();
+    }
+    await page.waitForFunction(()=>__gameEval("phase==='done'"));
+    assert.equal(await page.locator('#ov-win').isVisible(), true);
+    assert.equal(await page.locator('#mini .mini-row.done').count(), 10);
+    await page.setViewportSize({width:390,height:844});
+    await page.evaluate(()=>__gameEval("setVoiceMode(true)"));
+    await page.getByRole('button',{name:'↻ Gioca ancora'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='colour' && __played.at(-1)==='ask5'"));
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll('.flower, #count-adult')].every(f=>{const r=f.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight;})));
+    await page.screenshot({path:path.join(require('node:os').tmpdir(),'fiori-mobile.png')});
+    await page.setViewportSize({width:1100,height:850});
+    // Colour balloons: the voice names a colour, the child pops that balloon.
+    await page.goto(`${url}/games/palloncini-dei-colori.html`);
+    assert.equal(await page.locator('.home-link').getAttribute('href'), '../index.html?v=20261025-come-2');
+    const balloonClips = await page.evaluate(()=>__gameEval(`(async()=>{ensureAudio(); await clipsReady; return Object.keys(CLIPS).map(k=>[k,clipBuffers[k]?.duration||0]);})()`));
+    assert.equal(balloonClips.length, 15);
+    assert(balloonClips.every(([,d])=>d>0.3), 'every balloon clip must decode: '+JSON.stringify(balloonClips));
+    await page.evaluate(()=>__gameEval("speed=0; window.__played=[]; playClip=async k=>{__played.push(k);};"));
+    await page.getByRole('button',{name:'▶ Inizia'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='ask' && __played.length>=2"));
+    const bl = await page.evaluate(()=>__gameEval("({target,order:[...order],played:[...__played]})"));
+    assert.deepEqual([...bl.order].sort(), ['black','blue','brown','green','orange','pink','purple','red','white','yellow']);
+    assert.deepEqual(bl.played, ['hello','pop_'+bl.target]);
+    assert.equal(await page.locator('.balloon').count(), 3);
+    assert.equal(await page.locator(`.balloon[data-item="${bl.target}"]`).count(), 1);
+    await page.evaluate(()=>__gameEval("__played.length=0"));
+    await page.locator(`.balloon:not([data-item="${bl.target}"])`).first().click({force:true});
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[phase,[...__played]]")), ['ask',['oops','pop_'+bl.target]]);
+    await page.evaluate(()=>__gameEval("__played.length=0"));
+    await page.locator(`.balloon[data-item="${bl.target}"]`).click({force:true});
+    assert.equal(await page.evaluate(()=>__gameEval("__played[0]")), 'great');
+    assert.equal(await page.locator('#word').textContent(), bl.target);
+    await page.screenshot({path:path.join(require('node:os').tmpdir(),'palloncini.png')});
+    for (let r = 1; r < 10; r++) {
+      await page.waitForFunction(r=>__gameEval(`phase==='ask' && roundIdx===${r}`), r);
+      assert.equal(await page.locator('.balloon').count(), r < 3 ? 3 : r < 6 ? 4 : 5);
+      await page.evaluate(()=>__gameEval("document.querySelector(`.balloon[data-item='${target}']`).click()"));
+    }
+    await page.waitForFunction(()=>__gameEval("phase==='done' && __played.includes('hero')"));
+    assert.equal(await page.locator('#ov-win').isVisible(), true);
+    assert.equal(await page.locator('.progress span.on').count(), 10);
+    await page.setViewportSize({width:390,height:844});
+    await page.getByRole('button',{name:'↻ Gioca ancora'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='ask'")); await page.waitForTimeout(1000);
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll('.balloon')].every(b=>{const r=b.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0;})));
+    await page.screenshot({path:path.join(require('node:os').tmpdir(),'palloncini-mobile.png')});
+    await page.setViewportSize({width:1100,height:850});
+    // Number balloons: the voice says "Find five balloons!", the child counts and taps the bunch of five.
+    await page.goto(`${url}/games/palloncini-dei-numeri.html`);
+    const numBalloonClips = await page.evaluate(()=>__gameEval(`(async()=>{ensureAudio(); await clipsReady; return Object.keys(CLIPS).map(k=>[k,clipBuffers[k]?.duration||0]);})()`));
+    assert.equal(numBalloonClips.length, 15);
+    assert(numBalloonClips.every(([,d])=>d>0.3));
+    await page.evaluate(()=>__gameEval("speed=0; window.__played=[]; playClip=async k=>{__played.push(k);};"));
+    await page.getByRole('button',{name:'▶ Inizia'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='ask' && __played.length>=2"));
+    const nb = await page.evaluate(()=>__gameEval("({target,order:[...order],played:[...__played]})"));
+    assert.deepEqual([...nb.order].sort((a,b)=>a-b), [1,2,3,4,5,6,7,8,9,10]);
+    assert.deepEqual(nb.played, ['hello','findb'+nb.target]);
+    assert.equal(await page.locator('.bunch').count(), 2);
+    assert.equal(await page.locator(`.bunch[data-item="${nb.target}"] .mini-balloon`).count(), nb.target);
+    assert(await page.evaluate(t=>[...document.querySelectorAll('.bunch')].every(b=>b.dataset.item==t||Math.abs(b.dataset.item-t)>=2), nb.target), 'early rounds: clearly different bunches');
+    await page.evaluate(()=>__gameEval("__played.length=0"));
+    await page.locator(`.bunch:not([data-item="${nb.target}"])`).first().click({force:true});
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[...__played]")), ['oops','findb'+nb.target]);
+    await page.evaluate(()=>__gameEval("speed=1"));
+    await page.locator(`.bunch[data-item="${nb.target}"]`).click({force:true});
+    await page.waitForFunction(()=>document.getElementById('word').classList.contains('show'));
+    assert.equal(await page.locator('.bunch.chosen .mini-balloon.counted').count(), nb.target);
+    await page.evaluate(()=>__gameEval("speed=0"));
+    assert.equal(await page.locator('#word').textContent(), nb.target+' '+['one','two','three','four','five','six','seven','eight','nine','ten'][nb.target-1]);
+    for (let r = 1; r < 10; r++) {
+      await page.waitForFunction(r=>__gameEval(`phase==='ask' && roundIdx===${r}`), r);
+      await page.evaluate(()=>__gameEval("document.querySelector(`.bunch[data-item='${target}']`).click()"));
+    }
+    await page.waitForFunction(()=>__gameEval("phase==='done' && __played.includes('hero')"));
+    await page.setViewportSize({width:390,height:844});
+    await page.getByRole('button',{name:'↻ Gioca ancora'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='ask'")); await page.waitForTimeout(1000);
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll('.bunch')].every(b=>{const r=b.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;})));
+    await page.screenshot({path:path.join(require('node:os').tmpdir(),'palloncini-numeri-mobile.png')});
+    await page.setViewportSize({width:1100,height:850});
     // Single selected vowel remains playable in all games.
-    for(const file of files.filter(f=>f!=='index.html')) {
+    for(const file of vowelGames.filter(f=>f!=='index.html')) {
       await page.goto(`${url}/${pagePath(file)}`);
       await page.evaluate(()=> {Learning.settings.vowels=['I'];});
       if(file==='parole-per-la-luna.html') assert(await page.evaluate(()=>__gameEval('level=1;pickTripWords().every(([w])=>w.includes("I"))')));
@@ -339,7 +557,7 @@ const server = http.createServer((req, res) => {
     await page.locator('a.game').first().click();
     assert(await page.locator('a.home-link').evaluate(a=>new URL(a.href).searchParams.has('refresh')));
     assert.deepEqual(errors,[]);
-    console.log('PASS: syntax, links, all 7 pages, calm retries, writing validation and reward, autonomous Luna, unlimited Caccia, goalkeeper, letter race, selected vowels, reading, progress, mobile layout.');
+    console.log('PASS: syntax, links, all 11 pages, calm retries, writing validation and reward, autonomous Luna, unlimited Caccia, goalkeeper, letter race, meteor counting (aloud or by Bolt) and drawing, number flowers counted aloud, colour and number balloons, selected vowels, reading, progress, mobile layout.');
   } finally { await browser.close(); server.close(); }
 })().catch(e => { console.error(e); server.close(); process.exitCode=1; });
 
