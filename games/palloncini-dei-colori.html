@@ -163,9 +163,10 @@ const COLOURS = [
 ];
 const MODE = 'colours';                 // 'colours' or 'numbers'
 const WORDS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
-const ITEMS = MODE === 'numbers' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : COLOURS.map(c => c.name);
-const askKey = item => MODE === 'numbers' ? 'findb' + item : 'pop_' + item;
-const wordOf = item => MODE === 'numbers' ? item + ' ' + WORDS[item - 1] : item;
+const LETTER_WORDS = { A: 'ape', E: 'elicottero', I: 'ippopotamo', O: 'orso', U: 'uva', L: 'luna', M: 'mela', F: 'fragola' };
+const ITEMS = MODE === 'numbers' ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : MODE === 'letters' ? Object.keys(LETTER_WORDS) : COLOURS.map(c => c.name);
+const askKey = item => MODE === 'numbers' ? 'findb' + item : MODE === 'letters' ? 'ask_' + item : 'pop_' + item;
+const wordOf = item => MODE === 'numbers' ? item + ' ' + WORDS[item - 1] : MODE === 'letters' ? item + ' come ' + LETTER_WORDS[item] : item;
 const byName = Object.fromEntries(COLOURS.map(c => [c.name, c]));
 const $ = id => document.getElementById(id);
 
@@ -233,9 +234,9 @@ const BALLOON = `<svg viewBox="0 0 100 190" aria-hidden="true">
   <path class="body" d="M50 4 C80 4 96 30 94 56 C92 84 70 104 50 106 C30 104 8 84 6 56 C4 30 20 4 50 4Z" stroke="#2a2233" stroke-width="3"/>
   <ellipse cx="32" cy="34" rx="9" ry="16" fill="#fff" opacity=".45" transform="rotate(25 32 34)"/>
 </svg>`;
-for (let i = 0; i < 10; i++) $('progress').appendChild(document.createElement('span'));
+for (let i = 0; i < ITEMS.length; i++) $('progress').appendChild(document.createElement('span'));
 function showProgress() {
-  [...$('progress').children].forEach((s, i) => { s.classList.toggle('on', i < roundIdx); if (i < roundIdx) s.style.setProperty('--c', MODE === 'numbers' ? '#f5b700' : byName[order[i]].hex); });
+  [...$('progress').children].forEach((s, i) => { s.classList.toggle('on', i < roundIdx); if (i < roundIdx) s.style.setProperty('--c', MODE === 'colours' ? byName[order[i]].hex : '#f5b700'); });
 }
 function shuffle(list) { const a = [...list]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 // Few balloons for a beginner: 3 at first, then 4, then 5.
@@ -279,11 +280,11 @@ function placeBalloons() {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'balloon'; b.dataset.item = name;
     b.setAttribute('aria-label', 'palloncino');
-    b.style.setProperty('--c', MODE === 'numbers' ? paint[i].hex : byName[name].hex);
+    b.style.setProperty('--c', MODE === 'colours' ? byName[name].hex : paint[i].hex);
     b.style.setProperty('--d', (i * .12) + 's');
     b.style.setProperty('--tilt', (i % 2 ? -3 : 3) + 'deg');
     b.style.marginTop = (i % 2 ? 6 : -6) + '%';
-    b.innerHTML = MODE === 'numbers' ? BALLOON.replace('</svg>', `<text class="num" x="50" y="56">${name}</text></svg>`) : BALLOON;
+    b.innerHTML = MODE === 'letters' ? BALLOON.replace('</svg>', `<text class="num" x="50" y="56">${name}</text></svg>`) : BALLOON;
     b.addEventListener('click', () => choose(name, b));
     box.appendChild(b);
   });

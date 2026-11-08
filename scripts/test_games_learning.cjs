@@ -8,7 +8,7 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '../games');
 const files = ['index.html', ...fs.readdirSync(root).filter(f => f.endsWith('.html'))];
-const numberGames = ['conta-le-meteore.html', 'fiori-dei-numeri.html', 'palloncini-dei-colori.html', 'palloncini-dei-numeri.html'];
+const numberGames = ['conta-le-meteore.html', 'fiori-dei-numeri.html', 'palloncini-dei-colori.html', 'palloncini-dei-numeri.html', 'palloncini-delle-lettere.html'];
 const vowelGames = files.filter(f => !numberGames.includes(f));
 const filePath = file => file === 'index.html' ? path.resolve(root, '../index.html') : path.join(root, file);
 const pagePath = file => file === 'index.html' ? 'index.html' : 'games/' + file;
@@ -517,6 +517,38 @@ const server = http.createServer((req, res) => {
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll('.bunch')].every(b=>{const r=b.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;})));
     await page.screenshot({path:path.join(require('node:os').tmpdir(),'palloncini-numeri-mobile.png')});
     await page.setViewportSize({width:1100,height:850});
+    // Letter balloons (Italian): A E I O U L M F, "Scoppia il palloncino con la emme! Emme, come mela."
+    await page.goto(`${url}/games/palloncini-delle-lettere.html`);
+    const letterClips = await page.evaluate(()=>__gameEval(`(async()=>{ensureAudio(); await clipsReady; return Object.keys(CLIPS).map(k=>[k,clipBuffers[k]?.duration||0]);})()`));
+    assert.equal(letterClips.length, 13);
+    assert(letterClips.every(([,d])=>d>0.3));
+    await page.evaluate(()=>__gameEval("speed=0; window.__played=[]; playClip=async k=>{__played.push(k);};"));
+    await page.getByRole('button',{name:'▶ Inizia'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='ask' && __played.length>=2"));
+    const lb = await page.evaluate(()=>__gameEval("({target,order:[...order],played:[...__played]})"));
+    assert.deepEqual([...lb.order].sort(), ['A','E','F','I','L','M','O','U']);
+    assert.deepEqual(lb.played, ['hello','ask_'+lb.target]);
+    assert.equal(await page.locator('.balloon').count(), 3);
+    assert.equal(await page.locator(`.balloon[data-item="${lb.target}"] text`).textContent(), lb.target);
+    await page.evaluate(()=>__gameEval("__played.length=0"));
+    await page.locator(`.balloon:not([data-item="${lb.target}"])`).first().click({force:true});
+    assert.deepEqual(await page.evaluate(()=>__gameEval("[...__played]")), ['oops','ask_'+lb.target]);
+    await page.evaluate(()=>__gameEval("__played.length=0"));
+    await page.locator(`.balloon[data-item="${lb.target}"]`).click({force:true});
+    assert.equal(await page.evaluate(()=>__gameEval("__played[0]")), 'great');   // "Bravo!" without repeating the letter
+    assert.match(await page.locator('#word').textContent(), new RegExp('^'+lb.target+' come '));
+    for (let r = 1; r < 8; r++) {
+      await page.waitForFunction(r=>__gameEval(`phase==='ask' && roundIdx===${r}`), r);
+      await page.evaluate(()=>__gameEval("document.querySelector(`.balloon[data-item='${target}']`).click()"));
+    }
+    await page.waitForFunction(()=>__gameEval("phase==='done' && __played.includes('hero')"));
+    assert.equal(await page.locator('.progress span.on').count(), 8);
+    await page.setViewportSize({width:390,height:844});
+    await page.getByRole('button',{name:'↻ Gioca ancora'}).click();
+    await page.waitForFunction(()=>__gameEval("phase==='ask'")); await page.waitForTimeout(1000);
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.screenshot({path:path.join(require('node:os').tmpdir(),'palloncini-lettere-mobile.png')});
+    await page.setViewportSize({width:1100,height:850});
     // Single selected vowel remains playable in all games.
     for(const file of vowelGames.filter(f=>f!=='index.html')) {
       await page.goto(`${url}/${pagePath(file)}`);
@@ -557,7 +589,7 @@ const server = http.createServer((req, res) => {
     await page.locator('a.game').first().click();
     assert(await page.locator('a.home-link').evaluate(a=>new URL(a.href).searchParams.has('refresh')));
     assert.deepEqual(errors,[]);
-    console.log('PASS: syntax, links, all 11 pages, calm retries, writing validation and reward, autonomous Luna, unlimited Caccia, goalkeeper, letter race, meteor counting (aloud or by Bolt) and drawing, number flowers counted aloud, colour and number balloons, selected vowels, reading, progress, mobile layout.');
+    console.log('PASS: syntax, links, all 12 pages, calm retries, writing validation and reward, autonomous Luna, unlimited Caccia, goalkeeper, letter race, meteor counting (aloud or by Bolt) and drawing, number flowers counted aloud, colour, number and letter balloons, selected vowels, reading, progress, mobile layout.');
   } finally { await browser.close(); server.close(); }
 })().catch(e => { console.error(e); server.close(); process.exitCode=1; });
 
