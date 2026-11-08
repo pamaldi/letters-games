@@ -38,6 +38,13 @@ main.py      check degli import
 |---|---|
 | `notebooks/titanic_albero_tipi_feature.ipynb` | Alberi sul Titanic con una feature per tipo (continua `Age`, ordinale `Pclass`, nominale `Title`, identificativo `PassengerId`), letti come diagramma, regole e partizione. Usa `mini_cart.py` (CART con split su sottoinsiemi per le nominali) e `tree_plots.py`. Dati: `data/titanic.csv` (copia del CSV di Data Science Dojo usato nel corso). |
 | `notebooks/titanic_regole.ipynb` | Regole decisionali sul Titanic: supporto, accuratezza, baseline/lift, Laplace e Wilson; decision set (voto, pesi, spareggio) e decision list (ordine, regioni effettive); nota sulla linearità della lavagna; sequential covering con criteri accuratezza/Laplace/FOIL, rimozione dei coperti, stabilità su 30 split. Usa `rule_learning.py` (solo numpy/pandas; `uv run notebooks/rule_learning.py` esegue l'autoverifica). |
+| `notebooks/titanic_introduzione_xai.ipynb` | Le domande della prima lezione sul Titanic: la regola «donna → sopravvive» e l'accuratezza per gruppo, fidelity contro accuratezza di surrogati di una random forest, fidelity per sesso × classe, proxy (`Title`, `Fare`). |
+| `notebooks/titanic_tradeoff_rudin.py` | Verifiche per Rudin 2019 nell'approfondimento 01 (§1.3): modelli interpretabili contro opachi (test fisso e CV 5×10, con e senza `Title`), variabilità della foresta con gli iperparametri, localizzazione dei disaccordi del surrogato di profondità 3. |
+| `notebooks/titanic_robustezza_causalita.py` | Verifiche per l'approfondimento 01 (§1.2): robustezza della random forest a piccole perturbazioni di età e prezzo, contro l'intervento «prezzo di prima classe ai passeggeri di terza» che illustra la differenza con la causalità. |
+| `notebooks/titanic_valutazione_xai.ipynb` | Valutare una spiegazione: agreement, Pearson e MSE come misure di fidelity, sanity check per randomizzazione dei parametri (a cascata) e delle etichette, incremental feature deletion globale con baseline casuale e locale con il segno delle attribuzioni. |
+| `notebooks/titanic_bias_fairness_eda.ipynb` | EDA dei mancanti, ricerca di un paradosso di Simpson e tassi standardizzati per classe, metriche di fairness per sesso (con/senza `Sex`, con il proxy `Title`), post-processing con soglie per gruppo scelte su validazione. |
+
+I tre notebook brevi usano `titanic_data.py` (caricamento, `Title`/`FamilySize`, split 70/30 con `random_state=0`, codifica con statistiche del solo training, metriche per gruppo).
 
 ## Librerie
 
